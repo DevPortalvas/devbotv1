@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from utils.database import get_balance
-from utils.feedback import add_feedback_buttons
 
 class Inventory(commands.Cog):
     def __init__(self, bot):
@@ -66,17 +65,13 @@ class Inventory(commands.Cog):
                         inline=False
                     )
 
-            # Add feedback buttons
-            feedback_view = add_feedback_buttons("inventory", user.id)
-            
             if isinstance(ctx_or_interaction, discord.Interaction):
                 if not ctx_or_interaction.response.is_done():
-                    await ctx_or_interaction.response.send_message(embed=embed, view=feedback_view)
+                    await ctx_or_interaction.response.send_message(embed=embed)
                 else:
-                    await ctx_or_interaction.followup.send(embed=embed, view=feedback_view)
+                    await ctx_or_interaction.followup.send(embed=embed)
             else:
-                message = await ctx_or_interaction.send(embed=embed, view=feedback_view)
-                feedback_view.message = message
+                await ctx_or_interaction.send(embed=embed)
                 
         except Exception as e:
             print(f"General error in inventory command: {e}")

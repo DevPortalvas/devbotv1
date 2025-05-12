@@ -165,7 +165,7 @@ def login():
         remember = 'remember' in request.form
         
         # Basic authentication - in production use database
-        if username == ADMIN_USERNAME and check_password_hash(generate_password_hash(ADMIN_PASSWORD), password):
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
             user = User(1, username, True)
             login_user(user, remember=remember)
             flash('Login successful!', 'success')

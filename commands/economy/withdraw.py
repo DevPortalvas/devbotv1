@@ -3,7 +3,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from utils.database import get_balance, save_balance
-from utils.feedback import add_feedback_buttons
 
 class Withdraw(commands.Cog):
     def __init__(self, bot):
@@ -90,14 +89,10 @@ class Withdraw(commands.Cog):
                 color=discord.Color.green()
             )
 
-        # Add feedback buttons
-        feedback_view = add_feedback_buttons("withdraw", user.id)
-            
         if isinstance(ctx_or_interaction, discord.Interaction):
-            await ctx_or_interaction.response.send_message(embed=embed, view=feedback_view)
+            await ctx_or_interaction.response.send_message(embed=embed)
         else:
-            message = await ctx_or_interaction.send(embed=embed, view=feedback_view)
-            feedback_view.message = message
+            await ctx_or_interaction.send(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Withdraw(bot))
