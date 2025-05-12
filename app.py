@@ -43,12 +43,15 @@ ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "password")
 OWNER_ID = "545609811354583040"  # Discord ID of the owner
 
-# Import bot instance from main.py to access bot data
-try:
-    from main import bot
-except ImportError:
-    logger.warning("Could not import bot from main.py")
-    bot = None
+# We can't import bot from main.py due to circular import
+# Instead, we'll try to access it if it exists in the global namespace later
+bot = None
+
+# This will be set when the bot is running if it needs to access the dashboard
+def set_bot_instance(bot_instance):
+    global bot
+    bot = bot_instance
+    logger.info("Bot instance registered with dashboard")
 
 # Sample user for admin access
 class User(UserMixin):

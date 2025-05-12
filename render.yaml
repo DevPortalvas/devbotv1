@@ -1,0 +1,41 @@
+services:
+  # Discord Bot service
+  - type: worker
+    name: discord-economy-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    repo: https://github.com/yourusername/discord-economy-bot
+    branch: main
+    envVars:
+      - key: TOKEN
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: STATUS_WEBHOOK_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+    autoDeploy: true
+
+  # Web Dashboard
+  - type: web
+    name: discord-bot-dashboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    repo: https://github.com/yourusername/discord-economy-bot
+    branch: main
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: SESSION_SECRET
+        fromService:
+          type: worker
+          name: discord-economy-bot
+          envVarKey: SESSION_SECRET
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+    autoDeploy: true
