@@ -1,37 +1,109 @@
 import os
-import asyncio
-import logging
+import discord
+import aiohttp
+from discord.ext import commands
 from dotenv import load_dotenv
+from utils.database import DatabaseConnection
+from keepalive import keep_alive
+from pymongo import MongoClient
 
-from bot import DevBotClient
-from utils.logger import setup_logging
-
-# Load environment variables
 load_dotenv()
+TOKEN = os.getenv("TOKEN")
+MONGO_URI = os.getenv("MONGO_URI")  # Ensure you have MONGO_URI in your .env file
 
-# Setup logging
-setup_logging()
-logger = logging.getLogger("bot")
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
 
-async def main():
-    # Get configuration from environment variables
-    token = os.getenv("DISCORD_TOKEN")
-    if not token:
-        logger.critical("No Discord token found. Please set the DISCORD_TOKEN environment variable.")
+bot = commands.Bot(command_prefix=commands.when_mentioned_or(
+    "d!"), intents=intents, help_command=None)
+
+# Connect to MongoDB
+try:
+    mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+    mongo_client.server_info()  # Test connection
+    db = mongo_client['discord_economy']  # Use the database name explicitly
+except Exception as e:
+    print(f"Failed to connect to MongoDB: {e}")
+    raise SystemExit("Could not connect to database")
+
+
+async def get_prefix(bot, message):
+    try:
+        if not message.guild:
+            return "?"
+
+        # Get prefix from MongoDB
+        prefix_data = db.prefixes.find_one({"guild_id": str(message.guild.id)})
+        return prefix_data["prefix"] if prefix_data else "d!"
+    except Exception:
+        return "d!"  # Default fallback
+
+
+bot.command_prefix = get_prefix
+
+
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user}")
+    
+    # Set streaming activity
+    activity = discord.Game(name="ΚΑΝΕ ΜΕ @ ΝΕΓΡΟ")
+    await bot.change_presence(activity=activity)
+    
+    # Initialize webhook status manager
+    bot.session = aiohttp.ClientSession()
+    webhook_url = os.getenv("STATUS_WEBHOOK_URL")
+    if webhook_url:
+        db_connection = DatabaseConnection.get_instance()
+        bot.webhook_manager = WebhookManager(webhook_url, bot, db_connection)
+        await bot.webhook_manager.initialize()
+        bot.loop.create_task(bot.webhook_manager.update_status())
+
+    # Load all extensions from /commands and subfolders
+    for root, dirs, files in os.walk("./commands"):
+        for filename in files:
+            if filename.endswith(".py"):
+                try:
+                    path = os.path.join(root, filename)
+                    module_path = path.replace("./", "").replace("/", ".")[:-3]
+                    await bot.load_extension(module_path)
+                    print(f"Loaded {filename}")
+                except Exception as e:
+                    print(f"Failed to load {filename}: {e}")
+
+    # Sync slash commands only once
+    try:
+        synced = await bot.tree.sync()
+        print(f"Successfully synced {len(synced)} slash command(s)")
+    except Exception as e:
+        print(f"Failed to sync slash commands: {e}")
+
+@bot.event
+async def on_message(message):
+    if message.author.bot:
         return
 
-    # Create and run the bot
-    bot = DevBotClient()
-    
-    try:
-        logger.info("Starting bot...")
-        await bot.start(token)
-    except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt. Shutting down...")
-        await bot.close()
-    except Exception as e:
-        logger.error(f"Error during bot execution: {e}", exc_info=True)
-        await bot.close()
+    if bot.user in message.mentions:
+        prefix = await get_prefix(bot, message)
+        embed = discord.Embed(
+            title="Server Prefix",
+            description=f"My prefix in this server is `{prefix}`",
+            color=discord.Color.blue()
+        )
+        await message.channel.send(embed=embed)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    await bot.process_commands(message)
+
+
+
+
+
+keep_alive()
+try:
+    bot.run(TOKEN)
+finally:
+    if hasattr(bot, 'webhook_manager'):
+        bot.loop.run_until_complete(bot.webhook_manager.set_offline())
+    if hasattr(bot, 'session'):
+        bot.loop.run_until_complete(bot.session.close())
