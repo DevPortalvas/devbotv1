@@ -9,7 +9,7 @@ class RussianRoulette(commands.Cog):
         self.bot = bot
         self.active_games = {}  # Store active games
 
-    @commands.command(name="russianroulette", aliases=['rr', 'russian'])
+    @commands.command(name="russianroulette", aliases=['rr', 'russian'], help="Play a game of Russian Roulette with another user. Take turns pulling the trigger until someone gets shot!")
     @commands.cooldown(1, 30, commands.BucketType.user)
     async def russianroulette(self, ctx, opponent: discord.Member):
         await self._start_game(ctx, opponent)
@@ -50,7 +50,8 @@ class RussianRoulette(commands.Cog):
             "other_player": other_player
         }
 
-        self.active_games[channel.id] = game_state
+        if channel:
+            self.active_games[channel.id] = game_state
 
         # Create the button
         class TriggerButton(discord.ui.Button):
@@ -80,9 +81,11 @@ class RussianRoulette(commands.Cog):
                         description=f"💀 {loser.mention} got shot!\n🏆 {winner.mention} wins!",
                         color=discord.Color.red()
                     )
-                    await interaction.message.edit(embed=result_embed, view=None)
+                    if interaction.message:
+                        await interaction.message.edit(embed=result_embed, view=None)
                     await interaction.response.defer()
-                    del self.cog.active_games[self.channel.id]
+                    if self.channel and self.channel.id in self.cog.active_games:
+                        del self.cog.active_games[self.channel.id]
                     return
 
                 # Switch players
@@ -96,7 +99,8 @@ class RussianRoulette(commands.Cog):
                                f"Chance of getting shot: {(1/game_state['remaining_rounds']*100):.1f}%",
                     color=discord.Color.gold()
                 )
-                await interaction.message.edit(embed=new_embed)
+                if interaction.message:
+                    await interaction.message.edit(embed=new_embed)
                 await interaction.response.defer()
 
         # Create the view and add the button

@@ -10,7 +10,7 @@ class Duel(commands.Cog):
         self.bot = bot
         self.active_duels = {}
 
-    @commands.command(name="duel", aliases=['fight', 'challenge'])
+    @commands.command(name="duel", aliases=['fight', 'challenge'], help="Challenge someone to a medieval duel. Choose different actions to defeat your opponent in combat!")
     @commands.cooldown(1, 30, commands.BucketType.user)
     async def duel(self, ctx, opponent: discord.Member):
         await self._start_duel(ctx, opponent)
@@ -136,7 +136,8 @@ class Duel(commands.Cog):
             try:
                 await view.wait()
             except asyncio.TimeoutError:
-                await channel.send("Duel timed out! Both fighters walked away.")
+                if channel and hasattr(channel, 'send'):
+                    await channel.send("Duel timed out! Both fighters walked away.")
                 return
 
             # Process actions
@@ -180,7 +181,8 @@ class Duel(commands.Cog):
                         description=f"{winner.mention} has defeated {loser.mention} in combat!",
                         color=discord.Color.gold()
                     )
-                    await channel.send(embed=final_embed)
+                    if channel and hasattr(channel, 'send'):
+                        await channel.send(embed=final_embed)
                     return
 
             duel_state["current_round"] += 1

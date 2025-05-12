@@ -32,7 +32,7 @@ class HelpButtons(discord.ui.View):
         current_page_commands = self.commands_list[start_idx:end_idx]
 
         embed = discord.Embed(
-            title="Help Menu",
+            title="📚 Command Help Menu",
             description=f"Page {self.page + 1}/{self.max_pages + 1}",
             color=discord.Color.blue()
         )
@@ -41,6 +41,10 @@ class HelpButtons(discord.ui.View):
             try:
                 # Get command name
                 name = cmd.name if hasattr(cmd, 'name') else str(cmd)
+                
+                # Determine if it's a slash command
+                is_slash = isinstance(cmd, app_commands.Command)
+                cmd_prefix = "/" if is_slash else "!"
                 
                 # Get description, with multiple fallbacks
                 description = None
@@ -54,19 +58,23 @@ class HelpButtons(discord.ui.View):
                 if not description:
                     description = "No description provided"
                 
-                # Get aliases safely
-                aliases = "None"
+                # Get aliases if available
+                aliases_text = ""
                 if hasattr(cmd, 'aliases') and cmd.aliases:
-                    aliases = ", ".join(cmd.aliases)
+                    aliases = ", ".join([f"!{alias}" for alias in cmd.aliases])
+                    aliases_text = f"\n**Aliases:** {aliases}"
                 
                 # Format the field value
-                value = f"Description: {description}\nAliases: {aliases}"
-                embed.add_field(name=name, value=value, inline=False)
+                cmd_type = "Slash Command" if is_slash else "Text Command"
+                value = f"**Type:** {cmd_type}\n**Description:** {description}{aliases_text}"
+                
+                embed.add_field(name=f"{cmd_prefix}{name}", value=value, inline=False)
                 
             except Exception as e:
                 print(f"Error processing command {cmd}: {e}")
                 continue
 
+        embed.set_footer(text="Use the buttons below to navigate through pages • Use !help or /help to see this menu")
         return embed
 
 class Help(commands.Cog):
@@ -83,8 +91,14 @@ class Help(commands.Cog):
 
     async def _show_help(self, ctx_or_interaction):
         try:
-            # Get all visible commands
+            # Get all visible commands and app commands
             commands_list = [cmd for cmd in self.bot.commands if not cmd.hidden]
+            
+            # Include slash commands
+            for cmd in self.bot.tree.get_commands():
+                # Add app commands that aren't already represented in regular commands
+                if not any(regular_cmd.name == cmd.name for regular_cmd in commands_list):
+                    commands_list.append(cmd)
             
             # Create view with buttons
             view = HelpButtons(commands_list)
@@ -95,6 +109,7 @@ class Help(commands.Cog):
             else:
                 await ctx_or_interaction.send(embed=embed, view=view)
         except Exception as e:
+            print(f"Error in help command: {e}")
             error_embed = discord.Embed(
                 title="Error",
                 description="An error occurred while showing the help menu. Please try again later.",
