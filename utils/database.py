@@ -35,7 +35,13 @@ class DatabaseConnection:
     def __init__(self):
         self.client = None
         self.db = None
-        self.connect()
+        self.economies = None
+        self.shop = None
+        # Always connect on initialization
+        try:
+            self.connect()
+        except Exception as e:
+            print(f"Error initializing database connection: {e}")
     
     @classmethod
     def get_instance(cls):
@@ -47,6 +53,9 @@ class DatabaseConnection:
         try:
             self.client = MongoClient(MONGO_URI)
             self.db = self.client['discord_economy']
+            # Initialize collection references
+            self.economies = self.db.economies
+            self.shop = self.db.shop
             # Test the connection
             self.client.admin.command('ping')
         except Exception as e:
@@ -59,14 +68,17 @@ class DatabaseConnection:
         self.connect()
 
 db_connection = DatabaseConnection.get_instance()
-db = db_connection.db
+db = db_connection
 
 @with_retry
 def get_balance(guild_id, user_id):
     try:
+        # Get a fresh db connection
+        db_conn = DatabaseConnection.get_instance()
+        
         # Global currency - only use user_id
         query = {"user_id": str(user_id)}
-        user_data = db.economies.find_one(query)
+        user_data = db_conn.economies.find_one(query)
         
         if not user_data:
             user_data = {
@@ -77,7 +89,7 @@ def get_balance(guild_id, user_id):
                 "luck": 1.0,          # Default luck multiplier for steal/heist
                 "inventory": []       # User's inventory of purchased items
             }
-            db.economies.insert_one(user_data)
+            db_conn.economies.insert_one(user_data)
             return {"pocket": 0, "bank": 0, "bank_limit": 10000, "luck": 1.0, "inventory": []}
         
         return {
@@ -93,11 +105,14 @@ def get_balance(guild_id, user_id):
 
 @with_retry
 def update_balance(guild_id, user_id, amount, location="pocket"):
+    # Get a fresh db connection
+    db_conn = DatabaseConnection.get_instance()
+    
     MAX_VALUE = 2**63-1
     # Global currency - only use user_id
     query = {"user_id": str(user_id)}
     
-    current = db.economies.find_one(query)
+    current = db_conn.economies.find_one(query)
     if current is None:
         current = {
             "pocket": 0,
@@ -120,56 +135,81 @@ def update_balance(guild_id, user_id, amount, location="pocket"):
     
     new_amount = min(MAX_VALUE, max(0, current.get(location, 0) + amount))
     update = {"$set": {location: new_amount}}
-    db.economies.update_one(query, update, upsert=True)
+    db_conn.economies.update_one(query, update, upsert=True)
     return True
 
 @with_retry
 def save_balance(guild_id, user_id, balance):
+    # Get a fresh db connection
+    db_conn = DatabaseConnection.get_instance()
+    
     # Global currency - only use user_id
     query = {"user_id": str(user_id)}
     update = {"$set": balance}
-    db.economies.update_one(query, update, upsert=True)
+    db_conn.economies.update_one(query, update, upsert=True)
     
 @with_retry
 def update_bank_limit(user_id, new_limit):
+    # Get a fresh db connection
+    db_conn = DatabaseConnection.get_instance()
+    
     query = {"user_id": str(user_id)}
     update = {"$set": {"bank_limit": new_limit}}
-    db.economies.update_one(query, update, upsert=True)
+    db_conn.economies.update_one(query, update, upsert=True)
     
 @with_retry
 def update_luck(user_id, new_luck):
+    # Get a fresh db connection
+    db_conn = DatabaseConnection.get_instance()
+    
     query = {"user_id": str(user_id)}
     update = {"$set": {"luck": new_luck}}
-    db.economies.update_one(query, update, upsert=True)
+    db_conn.economies.update_one(query, update, upsert=True)
     
 @with_retry
 def add_to_inventory(user_id, item):
+    # Get a fresh db connection
+    db_conn = DatabaseConnection.get_instance()
+    
     query = {"user_id": str(user_id)}
     update = {"$push": {"inventory": item}}
-    db.economies.update_one(query, update, upsert=True)
+    db_conn.economies.update_one(query, update, upsert=True)
     
 @with_retry
 def get_shop_items():
+    # Get a fresh db connection
+    db_conn = DatabaseConnection.get_instance()
+    
     # Get the current shop items with stock
-    shop_data = db.shop.find_one({"id": "current_shop"})
+    shop_data = db_conn.shop.find_one({"id": "current_shop"})
     
     if not shop_data or time.time() - shop_data.get("last_reset", 0) > 10800:  # 3 hours in seconds
         # Time to reset the shop
         items = [
-            {"id": "banknote", "name": "🏦 Bank Note", "price": 5000, "description": "Increases your bank limit by $5,000", "stock": random.randint(1, 10)},
-            {"id": "luck_boost", "name": "🍀 Luck Boost", "price": 7500, "description": "Increases your luck by 10% for steal and heist commands", "stock": random.randint(1, 5)},
-            {"id": "shield", "name": "🛡️ Theft Shield", "price": 10000, "description": "Protects your money from theft for 24 hours", "stock": random.randint(0, 3)},
-            {"id": "medal", "name": "🥇 Prestige Medal", "price": 50000, "description": "A rare collectible to show your wealth", "stock": random.randint(0, 1)},
+            # Always included items with minimum stock of 5
+            {"id": "banknote", "name": "🏦 Bank Note", "price": 5000, "description": "Increases your bank limit by $5,000", "stock": random.randint(5, 10)},
+            {"id": "luck_boost", "name": "🍀 Luck Boost", "price": 7500, "description": "Increases your luck by 10% for steal and heist commands", "stock": random.randint(5, 8)},
+            {"id": "shield", "name": "🛡️ Theft Shield", "price": 100000, "description": "Protects your money from theft for 24 hours", "stock": random.randint(5, 7)},
+            
+            # Optional items
+            {"id": "medal", "name": "🥇 Prestige Medal", "price": 50000, "description": "A rare collectible to show your wealth", "stock": random.randint(0, 3)},
             {"id": "mystery_box", "name": "📦 Mystery Box", "price": 15000, "description": "Contains a random reward", "stock": random.randint(3, 8)}
         ]
         
-        # Randomly determine which items will be in stock (at least 2)
-        available_count = random.randint(2, len(items))
-        random.shuffle(items)
-        available_items = items[:available_count]
+        # The first 3 items are guaranteed to be in stock (bank notes, luck boost, shield)
+        guaranteed_items = items[:3]
+        
+        # For the remaining items, randomly determine if they'll be in stock
+        optional_items = []
+        for item in items[3:]:
+            if random.random() > 0.3:  # 70% chance to include each optional item
+                optional_items.append(item)
+        
+        # Combine guaranteed and optional items
+        available_items = guaranteed_items + optional_items
         
         # Save to database
-        db.shop.update_one(
+        db_conn.shop.update_one(
             {"id": "current_shop"}, 
             {"$set": {"items": available_items, "last_reset": time.time()}}, 
             upsert=True
@@ -181,7 +221,10 @@ def get_shop_items():
     
 @with_retry
 def update_item_stock(item_id, change):
-    shop_data = db.shop.find_one({"id": "current_shop"})
+    # Get a fresh db connection
+    db_conn = DatabaseConnection.get_instance()
+    
+    shop_data = db_conn.shop.find_one({"id": "current_shop"})
     if not shop_data:
         return False
         
@@ -193,7 +236,7 @@ def update_item_stock(item_id, change):
                 return False
                 
             item["stock"] = new_stock
-            db.shop.update_one({"id": "current_shop"}, {"$set": {"items": items}})
+            db_conn.shop.update_one({"id": "current_shop"}, {"$set": {"items": items}})
             return True
             
     return False

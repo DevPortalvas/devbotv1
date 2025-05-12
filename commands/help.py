@@ -44,7 +44,7 @@ class HelpButtons(discord.ui.View):
                 
                 # Determine if it's a slash command
                 is_slash = isinstance(cmd, app_commands.Command)
-                cmd_prefix = "/" if is_slash else "!"
+                cmd_prefix = "/" if is_slash else "d!"
                 
                 # Get description, with multiple fallbacks
                 description = None
@@ -61,7 +61,7 @@ class HelpButtons(discord.ui.View):
                 # Get aliases if available
                 aliases_text = ""
                 if hasattr(cmd, 'aliases') and cmd.aliases:
-                    aliases = ", ".join([f"!{alias}" for alias in cmd.aliases])
+                    aliases = ", ".join([f"{alias}" for alias in cmd.aliases])
                     aliases_text = f"\n**Aliases:** {aliases}"
                 
                 # Format the field value
@@ -91,13 +91,21 @@ class Help(commands.Cog):
 
     async def _show_help(self, ctx_or_interaction):
         try:
-            # Get all visible commands and app commands
-            commands_list = [cmd for cmd in self.bot.commands if not cmd.hidden]
+            # Tester command names to exclude from regular help
+            tester_command_names = [
+                "thelp", "addtester", "removetester", "listtesters", 
+                "testmoney", "resetmoney", "getitem", "inventoryreset"
+            ]
             
-            # Include slash commands
+            # Get all visible commands and app commands, excluding tester commands
+            commands_list = [cmd for cmd in self.bot.commands 
+                           if not cmd.hidden and cmd.name not in tester_command_names]
+            
+            # Include slash commands, but exclude tester commands
             for cmd in self.bot.tree.get_commands():
-                # Add app commands that aren't already represented in regular commands
-                if not any(regular_cmd.name == cmd.name for regular_cmd in commands_list):
+                # Add app commands that aren't tester commands and aren't already represented
+                if (cmd.name not in tester_command_names and 
+                    not any(regular_cmd.name == cmd.name for regular_cmd in commands_list)):
                     commands_list.append(cmd)
             
             # Create view with buttons

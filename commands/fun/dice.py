@@ -75,9 +75,9 @@ class DiceRoller(commands.Cog):
             # Create embed
             author = ctx_or_interaction.author if hasattr(ctx_or_interaction, 'author') else ctx_or_interaction.user
             embed = discord.Embed(
-                title="🎲 Dice Roller",
+                title="Dice Roller",
                 description="\n".join(results),
-                color=discord.Color.gold()
+                color=0xF1C40F  # Gold color
             )
             
             # Only show total if there are multiple dice notations

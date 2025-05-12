@@ -31,9 +31,9 @@ class Trivia(commands.Cog):
             "cartoons": 32
         }
         self.difficulty_colors = {
-            "easy": discord.Color.green(),
-            "medium": discord.Color.gold(),
-            "hard": discord.Color.red()
+            "easy": 0x2ECC71,  # Green
+            "medium": 0xF1C40F,  # Gold
+            "hard": 0xE74C3C    # Red
         }
         
     @commands.command(name="trivia", help="Start a trivia game. Optional: specify category and difficulty (easy/medium/hard)")
@@ -67,7 +67,7 @@ class Trivia(commands.Cog):
                 embed = discord.Embed(
                     title="Invalid Category",
                     description=f"Available categories: {categories_list}",
-                    color=discord.Color.red()
+                    color=0xE74C3C  # Red
                 )
                 if isinstance(ctx_or_interaction, discord.Interaction):
                     await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
@@ -80,7 +80,7 @@ class Trivia(commands.Cog):
             embed = discord.Embed(
                 title="Invalid Difficulty",
                 description="Difficulty must be one of: `easy`, `medium`, `hard`",
-                color=discord.Color.red()
+                color=0xE74C3C  # Red
             )
             if isinstance(ctx_or_interaction, discord.Interaction):
                 await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
@@ -124,79 +124,98 @@ class Trivia(commands.Cog):
             embed = discord.Embed(
                 title=f"Trivia: {category_name}",
                 description=f"**{question}**",
-                color=self.difficulty_colors.get(question_difficulty, discord.Color.blue())
+                color=self.difficulty_colors.get(question_difficulty, 0x3498DB)  # Default blue
             )
             
             # Add answer choices with letters
             answer_text = ""
-            letter_emojis = ["🇦", "🇧", "🇨", "🇩"]
-            correct_emoji = None
+            letters = ["A", "B", "C", "D"]
+            correct_letter = None
             
             for i, answer in enumerate(all_answers):
-                emoji = letter_emojis[i]
-                answer_text += f"{emoji} {answer}\n"
+                letter = letters[i]
+                answer_text += f"{letter}. {answer}\n"
                 if answer == correct_answer:
-                    correct_emoji = emoji
+                    correct_letter = letter
                     
             embed.add_field(name="Answers", value=answer_text, inline=False)
             embed.set_footer(text=f"Difficulty: {question_difficulty.capitalize()} | You have 15 seconds to answer")
             
+            # Create answer buttons
+            class AnswerButton(discord.ui.Button):
+                def __init__(self, letter, style=discord.ButtonStyle.primary):
+                    super().__init__(label=letter, style=style)
+                    self.letter = letter
+                    
+                async def callback(self, interaction: discord.Interaction):
+                    # Original user check
+                    original_user = ctx_or_interaction.author if hasattr(ctx_or_interaction, 'author') else ctx_or_interaction.user
+                    if interaction.user.id != original_user.id:
+                        await interaction.response.send_message("This isn't your trivia question!", ephemeral=True)
+                        return
+                        
+                    # Check answer
+                    is_correct = self.letter == correct_letter
+                    
+                    # Create result embed
+                    if is_correct:
+                        result_embed = discord.Embed(
+                            title="Correct!",
+                            description=f"**{question}**\n\nThe answer was: **{correct_answer}**",
+                            color=0x2ECC71  # Green
+                        )
+                    else:
+                        result_embed = discord.Embed(
+                            title="Wrong!",
+                            description=f"**{question}**\n\nThe correct answer was: **{correct_answer}**",
+                            color=0xE74C3C  # Red
+                        )
+                        
+                    # Edit the message to show result
+                    self.view.stop()
+                    await interaction.response.edit_message(embed=result_embed, view=None)
+            
+            # Create view with answer buttons
+            view = discord.ui.View(timeout=15.0)
+            for letter in letters:
+                view.add_item(AnswerButton(letter))
+                
+            # Add timeout handler
+            async def on_timeout():
+                timeout_embed = discord.Embed(
+                    title="Time's Up!",
+                    description=f"**{question}**\n\nThe correct answer was: **{correct_answer}**",
+                    color=0x7F8C8D  # Gray
+                )
+                
+                # Get the message
+                message = None
+                if isinstance(ctx_or_interaction, discord.Interaction):
+                    if hasattr(ctx_or_interaction, "original_response"):
+                        try:
+                            message = await ctx_or_interaction.original_response()
+                        except:
+                            pass
+                else:
+                    message = await ctx_or_interaction.channel.fetch_message(ctx_or_interaction.message.id)
+                    
+                if message:
+                    await message.edit(embed=timeout_embed, view=None)
+            
+            view.on_timeout = on_timeout
+            
             # Send the question
             if isinstance(ctx_or_interaction, discord.Interaction):
-                await ctx_or_interaction.response.send_message(embed=embed)
-                message = await ctx_or_interaction.original_response()
+                await ctx_or_interaction.response.send_message(embed=embed, view=view)
             else:
-                message = await ctx_or_interaction.send(embed=embed)
-                
-            # Add reactions for answers
-            for i in range(len(all_answers)):
-                await message.add_reaction(letter_emojis[i])
-                
-            # Function to check reactions
-            def check(reaction, user):
-                return (
-                    reaction.message.id == message.id and
-                    str(reaction.emoji) in letter_emojis and
-                    user != self.bot.user and
-                    (isinstance(ctx_or_interaction, discord.Interaction) and user == ctx_or_interaction.user or 
-                     hasattr(ctx_or_interaction, 'author') and user == ctx_or_interaction.author)
-                )
-                
-            try:
-                # Wait for reaction from original user
-                reaction, user = await self.bot.wait_for('reaction_add', timeout=15.0, check=check)
-                
-                # Check if correct
-                if str(reaction.emoji) == correct_emoji:
-                    result_embed = discord.Embed(
-                        title="✅ Correct!",
-                        description=f"**{question}**\n\nThe answer was: **{correct_answer}**",
-                        color=discord.Color.green()
-                    )
-                else:
-                    result_embed = discord.Embed(
-                        title="❌ Wrong!",
-                        description=f"**{question}**\n\nThe correct answer was: **{correct_answer}**",
-                        color=discord.Color.red()
-                    )
-                    
-                await message.edit(embed=result_embed)
-                
-            except asyncio.TimeoutError:
-                # Time's up
-                timeout_embed = discord.Embed(
-                    title="⏱️ Time's Up!",
-                    description=f"**{question}**\n\nThe correct answer was: **{correct_answer}**",
-                    color=discord.Color.dark_gray()
-                )
-                await message.edit(embed=timeout_embed)
+                await ctx_or_interaction.send(embed=embed, view=view)
                 
         except Exception as e:
             print(f"Error in trivia command: {e}")
             error_embed = discord.Embed(
                 title="Error",
                 description="Failed to fetch a trivia question. Please try again later.",
-                color=discord.Color.red()
+                color=0xE74C3C  # Red
             )
             if isinstance(ctx_or_interaction, discord.Interaction):
                 if not ctx_or_interaction.response.is_done():

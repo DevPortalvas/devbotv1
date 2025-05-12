@@ -27,3 +27,4 @@ discord.py
 Flask
 pymongo
 python-dotenv
+psutil

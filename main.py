@@ -4,6 +4,7 @@ import aiohttp
 from discord.ext import commands
 from dotenv import load_dotenv
 from utils.database import DatabaseConnection
+from utils.webhook import WebhookManager
 from keepalive import keep_alive
 from pymongo import MongoClient
 
@@ -15,8 +16,17 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-bot = commands.Bot(command_prefix=commands.when_mentioned_or(
-    "d!"), intents=intents, help_command=None)
+class ExtendedBot(commands.Bot):
+    """Custom Bot class with additional properties for webhook and session"""
+    def __init__(self, command_prefix, **kwargs):
+        super().__init__(command_prefix, **kwargs)
+        self.webhook_manager = None
+        self.session = None
+
+# Create the bot with our extended class
+bot = ExtendedBot(command_prefix=commands.when_mentioned_or("d!"), 
+                 intents=intents, 
+                 help_command=None)
 
 # Connect to MongoDB
 try:
@@ -61,12 +71,33 @@ async def on_ready():
         bot.loop.create_task(bot.webhook_manager.update_status())
 
     # Load all extensions from /commands and subfolders
+    # First load tester modules
+    tester_modules = [
+        "commands.tester.addtester",
+        "commands.tester.testmoney",
+        "commands.tester.testitems",
+        "commands.tester.thelp"
+    ]
+    
+    for module in tester_modules:
+        try:
+            await bot.load_extension(module)
+            print(f"Loaded tester module: {module}")
+        except Exception as e:
+            print(f"Failed to load tester module {module}: {e}")
+    
+    # Now load all other modules
     for root, dirs, files in os.walk("./commands"):
         for filename in files:
             if filename.endswith(".py"):
                 try:
                     path = os.path.join(root, filename)
                     module_path = path.replace("./", "").replace("/", ".")[:-3]
+                    
+                    # Skip tester modules as they were already loaded
+                    if module_path in tester_modules:
+                        continue
+                        
                     await bot.load_extension(module_path)
                     print(f"Loaded {filename}")
                 except Exception as e:
@@ -113,12 +144,18 @@ try:
     
     # Continue with normal bot startup
     keep_alive()
+    
+    # Check if TOKEN is available
+    if not TOKEN:
+        print("ERROR: Discord bot token not found. Please set TOKEN in .env file.")
+        sys.exit(1)
+        
     try:
         bot.run(TOKEN)
     finally:
-        if hasattr(bot, 'webhook_manager'):
+        if bot.webhook_manager:
             bot.loop.run_until_complete(bot.webhook_manager.set_offline())
-        if hasattr(bot, 'session'):
+        if bot.session:
             bot.loop.run_until_complete(bot.session.close())
 except socket.error:
     print("Another instance is already running - exiting")
