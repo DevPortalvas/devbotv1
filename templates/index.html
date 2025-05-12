@@ -254,6 +254,26 @@
                     <i class="fab fa-discord me-2"></i> Add to Discord
                 </a>
             </div>
+            
+            {% if mongo_status %}
+            <div class="mt-4 text-center">
+                <div class="badge bg-{{ 'success' if mongo_status == 'Connected' else 'danger' }} p-2 mb-2">
+                    <i class="fas fa-database me-1"></i> MongoDB: {{ mongo_status }}
+                </div>
+                {% if collections %}
+                <div class="small text-light-emphasis mt-2">
+                    <p>Available collections: {{ collections|length }}</p>
+                    <ul class="list-unstyled small">
+                        {% for collection in collections %}
+                        <li class="d-inline-block me-2 mb-1">
+                            <span class="badge bg-secondary">{{ collection }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
     </div>
     
