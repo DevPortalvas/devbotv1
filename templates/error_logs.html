@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Error Logs - Discord Bot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 page-header">Error Logs</h1>
+        <div class="d-flex align-items-center">
+            <button class="btn btn-sm btn-outline-secondary me-2">
+                <i class="fas fa-filter me-1"></i> Filter
+            </button>
+            <button class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-download me-1"></i> Export
+            </button>
+        </div>
+    </div>
+    
+    <!-- Error Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-sm-6 col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Total Errors</h6>
+                            <h2 class="mb-0">{{ error_count }}</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(155, 89, 182, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-exclamation-triangle" style="color: var(--purple-primary);"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">Last 24 hours</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-sm-6 col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Critical Errors</h6>
+                            <h2 class="mb-0">{{ critical_count }}</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(231, 76, 60, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-skull-crossbones" style="color: #E74C3C;"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ (critical_count / error_count * 100) | round }}%" aria-valuenow="{{ (critical_count / error_count * 100) | round }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">{{ (critical_count / error_count * 100) | round }}% of all errors</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-sm-6 col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Warnings</h6>
+                            <h2 class="mb-0">{{ warning_count }}</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(241, 196, 15, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-exclamation-circle" style="color: #F1C40F;"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ (warning_count / error_count * 100) | round }}%" aria-valuenow="{{ (warning_count / error_count * 100) | round }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">{{ (warning_count / error_count * 100) | round }}% of all errors</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-sm-6 col-md-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Resolved</h6>
+                            <h2 class="mb-0">1</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(46, 204, 113, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-check-circle" style="color: #2ECC71;"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (1 / error_count * 100) | round }}%" aria-valuenow="{{ (1 / error_count * 100) | round }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">{{ (1 / error_count * 100) | round }}% of all errors</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Error Distribution Chart -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Error Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="errorDistributionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Error Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="errorTimelineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Error Log Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Error Details</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">ID</th>
+                            <th scope="col">Timestamp</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Severity</th>
+                            <th scope="col">Message</th>
+                            <th scope="col">Location</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for error in errors %}
+                        <tr>
+                            <td>{{ error.id }}</td>
+                            <td>{{ error.timestamp }}</td>
+                            <td><span class="badge {{ error.type_badge }}">{{ error.type }}</span></td>
+                            <td><span class="badge {{ error.severity_badge }}">{{ error.severity }}</span></td>
+                            <td>{{ error.message }}</td>
+                            <td><code>{{ error.location }}</code></td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Mark as Resolved">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const textColor = isDarkMode ? '#f8f9fa' : '#212529';
+        const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        
+        // Common chart config
+        const chartConfig = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: textColor
+                    }
+                },
+                tooltip: {
+                    backgroundColor: isDarkMode ? '#333' : '#fff',
+                    titleColor: isDarkMode ? '#fff' : '#333',
+                    bodyColor: isDarkMode ? '#fff' : '#333',
+                    borderColor: isDarkMode ? '#555' : '#ddd',
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: gridColor
+                    },
+                    ticks: {
+                        color: textColor
+                    }
+                },
+                y: {
+                    grid: {
+                        color: gridColor
+                    },
+                    ticks: {
+                        color: textColor
+                    },
+                    beginAtZero: true
+                }
+            }
+        };
+        
+        // Error Distribution Chart
+        const errorDistributionCtx = document.getElementById('errorDistributionChart').getContext('2d');
+        const errorDistributionChart = new Chart(errorDistributionCtx, {
+            type: 'pie',
+            data: {
+                labels: [
+                    'Database',
+                    'API',
+                    'Command',
+                    'Network',
+                    'Other'
+                ],
+                datasets: [{
+                    data: [1, 1, 1, 0, 0],
+                    backgroundColor: [
+                        '#9B59B6',
+                        '#3498DB',
+                        '#E74C3C',
+                        '#2ECC71',
+                        '#F1C40F'
+                    ],
+                    borderColor: isDarkMode ? '#212529' : '#ffffff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            color: textColor,
+                            padding: 20,
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Error Timeline Chart
+        const errorTimelineCtx = document.getElementById('errorTimelineChart').getContext('2d');
+        const errorTimelineChart = new Chart(errorTimelineCtx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                datasets: [{
+                    label: 'Critical',
+                    data: [0, 0, 0, 1, 0, 0],
+                    borderColor: '#E74C3C',
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Warning',
+                    data: [0, 0, 0, 0, 1, 0],
+                    borderColor: '#F1C40F',
+                    backgroundColor: 'rgba(241, 196, 15, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Error',
+                    data: [0, 0, 0, 0, 0, 1],
+                    borderColor: '#3498DB',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: chartConfig
+        });
+        
+        // Store charts for theme changes
+        window.dashboardCharts = {
+            ...window.dashboardCharts, // Keep existing charts
+            errorDistribution: errorDistributionChart,
+            errorTimeline: errorTimelineChart
+        };
+        
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
+{% endblock %}

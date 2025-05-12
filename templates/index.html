@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="{{ theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Bot - Dashboard</title>
+    
+    <!-- Bootstrap CSS with Replit theme -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --purple-primary: #9B59B6;
+            --purple-secondary: #8E44AD;
+            --purple-light: rgba(155, 89, 182, 0.2);
+            --purple-dark: #6C3483;
+            --accent-color: #E74C3C;
+            
+            /* Theme transition */
+            --transition-time: 0.5s;
+        }
+        
+        /* Smooth theme transition */
+        body, .card, .btn, .form-control {
+            transition: background-color var(--transition-time) ease, 
+                       color var(--transition-time) ease, 
+                       border-color var(--transition-time) ease !important;
+        }
+        
+        /* Main styling */
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .landing-gradient {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(135deg, var(--purple-dark) 0%, #2C3E50 100%);
+            opacity: 0.8;
+            z-index: -1;
+        }
+        
+        .landing-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            padding: 2rem;
+        }
+        
+        .landing-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .landing-header h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .landing-header p {
+            font-size: 1.25rem;
+            max-width: 800px;
+            margin: 0 auto 1.5rem auto;
+            opacity: 0.9;
+        }
+        
+        .features-section {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            max-width: 1200px;
+        }
+        
+        .feature-card {
+            background-color: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .feature-icon {
+            font-size: 2.5rem;
+            color: var(--purple-primary);
+            margin-bottom: 1rem;
+        }
+        
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .cta-section {
+            text-align: center;
+            margin-top: 2rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--purple-primary);
+            border-color: var(--purple-primary);
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--purple-secondary);
+            border-color: var(--purple-secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-outline-light {
+            border-width: 2px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(0, 0, 0, 0.3);
+            transition: background-color 0.2s ease;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        /* Footer */
+        footer {
+            padding: 1.5rem 0;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Glow animation for the logo */
+        .logo-icon {
+            animation: glow 3s infinite alternate;
+        }
+        
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 10px rgba(155, 89, 182, 0.8);
+            }
+            to {
+                text-shadow: 0 0 20px rgba(155, 89, 182, 1), 0 0 30px rgba(155, 89, 182, 0.8);
+            }
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .landing-header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .landing-header p {
+                font-size: 1rem;
+            }
+            
+            .features-section {
+                gap: 1rem;
+            }
+            
+            .feature-card {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="landing-gradient"></div>
+    
+    <!-- Theme Toggle Button -->
+    <div class="theme-toggle" id="themeToggle">
+        {% if theme == 'dark' %}
+        <i class="fas fa-sun" style="color: white;"></i>
+        {% else %}
+        <i class="fas fa-moon" style="color: white;"></i>
+        {% endif %}
+    </div>
+    
+    <div class="landing-content">
+        <div class="landing-header">
+            <h1><i class="fas fa-robot logo-icon" style="color: var(--purple-primary);"></i> Discord Economy Bot</h1>
+            <p>A powerful Discord bot with advanced economy and interaction capabilities, offering dynamic user engagement through comprehensive game-like mechanics.</p>
+        </div>
+        
+        <div class="features-section">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+                <h3 class="feature-title">Advanced Economy</h3>
+                <p>Global currency system with bank limits, special items, and detailed transaction tracking.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-gamepad"></i>
+                </div>
+                <h3 class="feature-title">Interactive Games</h3>
+                <p>Fun mini-games like blackjack, heists, and roulette with betting functionality and rewards.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-store"></i>
+                </div>
+                <h3 class="feature-title">Dynamic Shop</h3>
+                <p>Randomized shop inventory that refreshes automatically with special items and limited stock.</p>
+            </div>
+        </div>
+        
+        <div class="cta-section">
+            <div class="d-flex gap-3 justify-content-center">
+                <a href="{{ url_for('login') }}" class="btn btn-primary">
+                    <i class="fas fa-chart-line me-2"></i> Access Dashboard
+                </a>
+                <a href="https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=8&scope=bot%20applications.commands" class="btn btn-outline-light" target="_blank">
+                    <i class="fab fa-discord me-2"></i> Add to Discord
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <p class="mb-0">&copy; 2025 Discord Economy Bot. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Theme Toggle JS -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    // Get current theme
+                    const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    
+                    // Update theme icon
+                    this.innerHTML = newTheme === 'dark' 
+                        ? '<i class="fas fa-sun" style="color: white;"></i>' 
+                        : '<i class="fas fa-moon" style="color: white;"></i>';
+                    
+                    // Save theme preference
+                    fetch('/api/toggle-theme', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            theme: newTheme
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update DOM theme
+                        document.documentElement.setAttribute('data-bs-theme', newTheme);
+                    })
+                    .catch(error => {
+                        console.error('Error updating theme:', error);
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -3,7 +3,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from utils.database import get_balance
-from utils.feedback import add_feedback_buttons
 
 class Balance(commands.Cog):
     def __init__(self, bot):
@@ -49,17 +48,13 @@ class Balance(commands.Cog):
             embed.add_field(name="Pocket", value=pocket_display, inline=True)
             embed.add_field(name="Bank", value=f"{bank_display} / {bank_limit_display}", inline=True)
 
-            # Add feedback buttons
-            feedback_view = add_feedback_buttons("balance", user.id)
-            
             if isinstance(ctx_or_interaction, discord.Interaction):
                 if not ctx_or_interaction.response.is_done():
-                    await ctx_or_interaction.response.send_message(embed=embed, view=feedback_view)
+                    await ctx_or_interaction.response.send_message(embed=embed)
                 else:
-                    await ctx_or_interaction.followup.send(embed=embed, view=feedback_view)
+                    await ctx_or_interaction.followup.send(embed=embed)
             else:
-                message = await ctx_or_interaction.send(embed=embed, view=feedback_view)
-                feedback_view.message = message
+                await ctx_or_interaction.send(embed=embed)
                 
         except Exception as e:
             print(f"General error in balance command: {e}")

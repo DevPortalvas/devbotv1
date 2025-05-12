@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="{{ theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Discord Bot Dashboard</title>
+    
+    <!-- Bootstrap CSS with Replit theme -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --purple-primary: #9B59B6;
+            --purple-secondary: #8E44AD;
+            --purple-light: rgba(155, 89, 182, 0.2);
+            --purple-dark: #6C3483;
+            --accent-color: #E74C3C;
+            
+            /* Theme transition */
+            --transition-time: 0.5s;
+        }
+        
+        /* Smooth theme transition */
+        body, .card, .navbar, .dropdown-menu, .btn, .form-control, .table, .modal, .alert, .badge, .progress, .list-group-item {
+            transition: background-color var(--transition-time) ease, 
+                       color var(--transition-time) ease, 
+                       border-color var(--transition-time) ease !important;
+        }
+        
+        /* Main styling */
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .login-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+        }
+        
+        .login-gradient {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            background: linear-gradient(135deg, var(--purple-dark) 0%, #2C3E50 100%);
+            opacity: 0.8;
+            z-index: -1;
+        }
+        
+        .login-card {
+            width: 100%;
+            max-width: 450px;
+            background-color: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .login-logo {
+            font-size: 3rem;
+            color: var(--purple-primary);
+            margin-bottom: 1rem;
+            animation: glow 3s infinite alternate;
+        }
+        
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 10px rgba(155, 89, 182, 0.8);
+            }
+            to {
+                text-shadow: 0 0 20px rgba(155, 89, 182, 1), 0 0 30px rgba(155, 89, 182, 0.8);
+            }
+        }
+        
+        .form-control {
+            background-color: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 1rem;
+        }
+        
+        .form-control:focus {
+            background-color: rgba(0, 0, 0, 0.3);
+            border-color: var(--purple-primary);
+            box-shadow: 0 0 0 0.25rem rgba(155, 89, 182, 0.25);
+        }
+        
+        .form-label {
+            font-weight: 500;
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--purple-primary);
+            border-color: var(--purple-primary);
+        }
+        
+        .btn-primary {
+            background-color: var(--purple-primary);
+            border-color: var(--purple-primary);
+            width: 100%;
+            padding: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 1rem;
+        }
+        
+        .btn-primary:hover, .btn-primary:focus {
+            background-color: var(--purple-secondary);
+            border-color: var(--purple-secondary);
+        }
+        
+        .return-link {
+            display: inline-block;
+            margin-top: 1.5rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        
+        .return-link:hover {
+            color: var(--purple-primary);
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background-color: rgba(0, 0, 0, 0.3);
+            transition: background-color 0.2s ease;
+            z-index: 10;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-gradient"></div>
+    
+    <!-- Theme Toggle Button -->
+    <div class="theme-toggle" id="themeToggle">
+        {% if theme == 'dark' %}
+        <i class="fas fa-sun" style="color: white;"></i>
+        {% else %}
+        <i class="fas fa-moon" style="color: white;"></i>
+        {% endif %}
+    </div>
+    
+    <div class="login-wrapper">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h1>Admin Login</h1>
+                <p class="text-muted">Enter your credentials to access the dashboard</p>
+            </div>
+            
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                </div>
+                
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                    <label class="form-check-label" for="remember">Remember me</label>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt me-2"></i> Login
+                </button>
+            </form>
+            
+            <div class="text-center">
+                <a href="{{ url_for('index') }}" class="return-link">
+                    <i class="fas fa-arrow-left me-1"></i> Return to Homepage
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Theme Toggle JS -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    // Get current theme
+                    const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    
+                    // Update theme icon
+                    this.innerHTML = newTheme === 'dark' 
+                        ? '<i class="fas fa-sun" style="color: white;"></i>' 
+                        : '<i class="fas fa-moon" style="color: white;"></i>';
+                    
+                    // Save theme preference
+                    fetch('/api/toggle-theme', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            theme: newTheme
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update DOM theme
+                        document.documentElement.setAttribute('data-bs-theme', newTheme);
+                    })
+                    .catch(error => {
+                        console.error('Error updating theme:', error);
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

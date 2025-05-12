@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="{{ theme }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Discord Bot Dashboard{% endblock %}</title>
+    
+    <!-- Bootstrap CSS with Replit theme -->
+    <link rel="stylesheet" href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css">
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --purple-primary: #9B59B6;
+            --purple-secondary: #8E44AD;
+            --purple-light: rgba(155, 89, 182, 0.2);
+            --purple-dark: #6C3483;
+            --accent-color: #E74C3C;
+            
+            /* Theme transition */
+            --transition-time: 0.5s;
+        }
+        
+        /* Smooth theme transition */
+        body, .card, .navbar, .dropdown-menu, .btn, .form-control, .table, .modal, .alert, .badge, .progress, .list-group-item {
+            transition: background-color var(--transition-time) ease, 
+                       color var(--transition-time) ease, 
+                       border-color var(--transition-time) ease !important;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bs-gray-800);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--purple-primary);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--purple-secondary);
+        }
+        
+        /* Main styling */
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding-top: 1.5rem;
+            padding-bottom: 1.5rem;
+        }
+        
+        /* Navigation */
+        .navbar-brand img {
+            height: 30px;
+            margin-right: 8px;
+        }
+        
+        .nav-item.active {
+            position: relative;
+        }
+        
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--purple-primary);
+            border-radius: 3px 3px 0 0;
+        }
+        
+        /* Cards and boxes */
+        .card {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card-header {
+            font-weight: 500;
+        }
+        
+        /* Stats boxes */
+        .stats-box {
+            border-left: 4px solid var(--purple-primary);
+            padding: 1rem;
+            border-radius: 4px;
+            transition: transform 0.2s ease;
+        }
+        
+        .stats-box:hover {
+            transform: translateY(-3px);
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background-color: var(--purple-primary);
+            border-color: var(--purple-primary);
+        }
+        
+        .btn-primary:hover, .btn-primary:focus {
+            background-color: var(--purple-secondary);
+            border-color: var(--purple-secondary);
+        }
+        
+        .btn-outline-primary {
+            color: var(--purple-primary);
+            border-color: var(--purple-primary);
+        }
+        
+        .btn-outline-primary:hover, .btn-outline-primary:focus {
+            background-color: var(--purple-primary);
+            border-color: var(--purple-primary);
+        }
+        
+        /* Loading spinner */
+        .loading-spinner {
+            width: 3rem;
+            height: 3rem;
+            border-width: 0.25rem;
+            color: var(--purple-primary);
+        }
+        
+        /* Theme toggle */
+        .theme-toggle {
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Footer */
+        footer {
+            padding: 1.5rem 0;
+        }
+        
+        /* Profile avatar */
+        .profile-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background-color: var(--purple-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--purple-primary);
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        /* Progress bars */
+        .progress-bar {
+            background-color: var(--purple-primary);
+        }
+        
+        /* Badges */
+        .badge-purple {
+            background-color: var(--purple-primary);
+            color: white;
+        }
+        
+        /* Charts */
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 300px;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('dashboard') }}">
+                <i class="fas fa-robot me-2" style="color: var(--purple-primary);"></i>
+                Discord Bot Dashboard
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                {% if current_user.is_authenticated %}
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item {{ 'active' if request.path == url_for('dashboard') }}">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="nav-item {{ 'active' if request.path == url_for('server_stats') }}">
+                        <a class="nav-link" href="{{ url_for('server_stats') }}">Server Stats</a>
+                    </li>
+                    <li class="nav-item {{ 'active' if request.path == url_for('error_logs') }}">
+                        <a class="nav-link" href="{{ url_for('error_logs') }}">Error Logs</a>
+                    </li>
+                </ul>
+                
+                <div class="d-flex align-items-center">
+                    <!-- Theme Toggle -->
+                    <div class="theme-toggle me-3" id="themeToggle">
+                        {% if theme == 'dark' %}
+                        <i class="fas fa-sun"></i>
+                        {% else %}
+                        <i class="fas fa-moon"></i>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- User Dropdown -->
+                    <div class="dropdown">
+                        <a class="d-flex align-items-center text-decoration-none dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="profile-avatar me-2">
+                                {{ current_user.username[0].upper() }}
+                            </div>
+                            <span>{{ current_user.username }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('settings') }}"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% endwith %}
+        
+        <!-- Page Content -->
+        {% block content %}{% endblock %}
+    </div>
+    
+    <!-- Footer -->
+    <footer class="py-3 border-top">
+        <div class="container text-center">
+            <p class="mb-0">&copy; {% now 'Y' %} Discord Bot Dashboard. All rights reserved.</p>
+        </div>
+    </footer>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Theme Toggle JS -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    // Get current theme
+                    const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    
+                    // Update theme icon
+                    this.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+                    
+                    // Save theme preference
+                    fetch('/api/toggle-theme', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            theme: newTheme
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Update DOM theme
+                        document.documentElement.setAttribute('data-bs-theme', newTheme);
+                        
+                        // Update all charts for theme consistency if they exist
+                        if (window.dashboardCharts) {
+                            // Update chart colors based on new theme
+                            const textColor = newTheme === 'dark' ? '#f8f9fa' : '#212529';
+                            const gridColor = newTheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                            
+                            // Update each chart
+                            Object.values(window.dashboardCharts).forEach(chart => {
+                                if (chart && chart.options) {
+                                    // Update legend text color
+                                    if (chart.options.plugins && chart.options.plugins.legend) {
+                                        chart.options.plugins.legend.labels.color = textColor;
+                                    }
+                                    
+                                    // Update tooltip colors
+                                    if (chart.options.plugins && chart.options.plugins.tooltip) {
+                                        chart.options.plugins.tooltip.backgroundColor = newTheme === 'dark' ? '#333' : '#fff';
+                                        chart.options.plugins.tooltip.titleColor = newTheme === 'dark' ? '#fff' : '#333';
+                                        chart.options.plugins.tooltip.bodyColor = newTheme === 'dark' ? '#fff' : '#333';
+                                        chart.options.plugins.tooltip.borderColor = newTheme === 'dark' ? '#555' : '#ddd';
+                                    }
+                                    
+                                    // Update axis colors
+                                    if (chart.options.scales) {
+                                        Object.keys(chart.options.scales).forEach(axis => {
+                                            if (chart.options.scales[axis].grid) {
+                                                chart.options.scales[axis].grid.color = gridColor;
+                                            }
+                                            if (chart.options.scales[axis].ticks) {
+                                                chart.options.scales[axis].ticks.color = textColor;
+                                            }
+                                            if (chart.options.scales[axis].title) {
+                                                chart.options.scales[axis].title.color = textColor;
+                                            }
+                                        });
+                                    }
+                                    
+                                    chart.update();
+                                }
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error updating theme:', error);
+                    });
+                });
+            }
+        });
+    </script>
+    
+    <!-- Template-specific JavaScript -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

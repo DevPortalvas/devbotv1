@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Discord Bot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 page-header">Bot Dashboard</h1>
+        <div class="d-flex align-items-center">
+            <div id="last-update" class="small text-muted me-3"></div>
+            <button id="refresh-stats" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+    
+    <!-- Stats Overview Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Servers</h6>
+                            <h2 class="mb-0" id="server-count">{{ server_count }}</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(155, 89, 182, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-server" style="color: var(--purple-primary);"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: 65%" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">Target: 50</small>
+                        <small class="text-success">
+                            <i class="fas fa-arrow-up me-1"></i>5.3%
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Users</h6>
+                            <h2 class="mb-0" id="user-count">{{ user_count }}</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(155, 89, 182, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-users" style="color: var(--purple-primary);"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: 70%" aria-valuenow="70" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">Target: 2,000</small>
+                        <small class="text-success">
+                            <i class="fas fa-arrow-up me-1"></i>8.2%
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Commands Used</h6>
+                            <h2 class="mb-0" id="command-count">{{ command_count }}</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(155, 89, 182, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-terminal" style="color: var(--purple-primary);"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: 55%" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">Daily: ~250</small>
+                        <small class="text-success">
+                            <i class="fas fa-arrow-up me-1"></i>12.7%
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Uptime</h6>
+                            <h2 class="mb-0" id="uptime-percent">{{ uptime_percent }}%</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(155, 89, 182, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-heartbeat" style="color: var(--purple-primary);"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ uptime_percent }}%" aria-valuenow="{{ uptime_percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">Target: 99.9%</small>
+                        <small class="text-success">
+                            <i class="fas fa-check-circle me-1"></i>Stable
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Resource Monitoring -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">CPU Usage</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-grow-1">
+                            <div class="progress" style="height: 15px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ cpu_usage }}%" aria-valuenow="{{ cpu_usage }}" aria-valuemin="0" aria-valuemax="100" id="cpu-progress">{{ cpu_usage }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="cpuChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Memory Usage</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-grow-1">
+                            <div class="progress" style="height: 15px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ memory_usage }}%" aria-valuenow="{{ memory_usage }}" aria-valuemin="0" aria-valuemax="100" id="memory-progress">{{ memory_usage }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="memoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Disk Usage</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-grow-1">
+                            <div class="progress" style="height: 15px;">
+                                <div class="progress-bar" role="progressbar" style="width: {{ disk_usage }}%" aria-valuenow="{{ disk_usage }}" aria-valuemin="0" aria-valuemax="100" id="disk-progress">{{ disk_usage }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container" style="height: 200px;">
+                        <canvas id="diskChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Errors and Command Usage -->
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Recent Errors</h5>
+                    <a href="{{ url_for('error_logs') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for error in errors %}
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ error.id }} - {{ error.type }}</h6>
+                                <small class="text-muted">{{ error.timestamp }}</small>
+                            </div>
+                            <p class="mb-1">{{ error.message }}</p>
+                            <div>
+                                <span class="badge {{ error.severity_badge }}">{{ error.severity }}</span>
+                                <small class="text-muted">{{ error.location }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if not errors %}
+                        <div class="list-group-item text-center py-4">
+                            <p class="mb-0">No errors to display</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Command Usage</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="commandChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const textColor = isDarkMode ? '#f8f9fa' : '#212529';
+        const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        
+        // Common chart config
+        const chartConfig = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false,
+                },
+                tooltip: {
+                    backgroundColor: isDarkMode ? '#333' : '#fff',
+                    titleColor: isDarkMode ? '#fff' : '#333',
+                    bodyColor: isDarkMode ? '#fff' : '#333',
+                    borderColor: isDarkMode ? '#555' : '#ddd',
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: gridColor
+                    },
+                    ticks: {
+                        color: textColor
+                    }
+                },
+                y: {
+                    grid: {
+                        color: gridColor
+                    },
+                    ticks: {
+                        color: textColor
+                    },
+                    beginAtZero: true
+                }
+            }
+        };
+        
+        // CPU Usage Chart
+        const cpuCtx = document.getElementById('cpuChart').getContext('2d');
+        const cpuChart = new Chart(cpuCtx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                datasets: [{
+                    label: 'CPU Usage %',
+                    data: [25, 30, 45, 55, 35, {{ cpu_usage }}],
+                    borderColor: '#9B59B6',
+                    backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: chartConfig
+        });
+        
+        // Memory Usage Chart
+        const memoryCtx = document.getElementById('memoryChart').getContext('2d');
+        const memoryChart = new Chart(memoryCtx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                datasets: [{
+                    label: 'Memory Usage %',
+                    data: [40, 35, 55, 60, 50, {{ memory_usage }}],
+                    borderColor: '#3498DB',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: chartConfig
+        });
+        
+        // Disk Usage Chart
+        const diskCtx = document.getElementById('diskChart').getContext('2d');
+        const diskChart = new Chart(diskCtx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                datasets: [{
+                    label: 'Disk Usage %',
+                    data: [20, 22, 24, 25, 26, {{ disk_usage }}],
+                    borderColor: '#E74C3C',
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: chartConfig
+        });
+        
+        // Command Usage Chart
+        const commandCtx = document.getElementById('commandChart').getContext('2d');
+        const commandChart = new Chart(commandCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Balance', 'Daily', 'Shop', 'Inventory', 'Work', 'Steal', 'Heist', 'Help'],
+                datasets: [{
+                    label: 'Command Usage',
+                    data: [850, 720, 550, 480, 420, 350, 250, 620],
+                    backgroundColor: [
+                        'rgba(155, 89, 182, 0.8)',
+                        'rgba(52, 152, 219, 0.8)',
+                        'rgba(46, 204, 113, 0.8)',
+                        'rgba(231, 76, 60, 0.8)',
+                        'rgba(241, 196, 15, 0.8)',
+                        'rgba(230, 126, 34, 0.8)',
+                        'rgba(155, 89, 182, 0.8)',
+                        'rgba(52, 152, 219, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgb(155, 89, 182)',
+                        'rgb(52, 152, 219)',
+                        'rgb(46, 204, 113)',
+                        'rgb(231, 76, 60)',
+                        'rgb(241, 196, 15)',
+                        'rgb(230, 126, 34)',
+                        'rgb(155, 89, 182)',
+                        'rgb(52, 152, 219)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                ...chartConfig,
+                plugins: {
+                    ...chartConfig.plugins,
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Store charts for theme changes
+        window.dashboardCharts = {
+            cpu: cpuChart,
+            memory: memoryChart,
+            disk: diskChart,
+            command: commandChart
+        };
+        
+        // Refresh stats automatically
+        const refreshStats = () => {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('server-count').textContent = data.server_count;
+                    document.getElementById('user-count').textContent = data.user_count;
+                    document.getElementById('command-count').textContent = data.command_count;
+                    document.getElementById('uptime-percent').textContent = data.uptime_percent + '%';
+                    
+                    // Update progress bars
+                    const cpuProgress = document.getElementById('cpu-progress');
+                    cpuProgress.style.width = data.cpu_usage + '%';
+                    cpuProgress.setAttribute('aria-valuenow', data.cpu_usage);
+                    cpuProgress.textContent = data.cpu_usage + '%';
+                    
+                    const memoryProgress = document.getElementById('memory-progress');
+                    memoryProgress.style.width = data.memory_usage + '%';
+                    memoryProgress.setAttribute('aria-valuenow', data.memory_usage);
+                    memoryProgress.textContent = data.memory_usage + '%';
+                    
+                    const diskProgress = document.getElementById('disk-progress');
+                    diskProgress.style.width = data.disk_usage + '%';
+                    diskProgress.setAttribute('aria-valuenow', data.disk_usage);
+                    diskProgress.textContent = data.disk_usage + '%';
+                    
+                    // Update charts with new data
+                    cpuChart.data.datasets[0].data[5] = data.cpu_usage;
+                    cpuChart.update();
+                    
+                    memoryChart.data.datasets[0].data[5] = data.memory_usage;
+                    memoryChart.update();
+                    
+                    diskChart.data.datasets[0].data[5] = data.disk_usage;
+                    diskChart.update();
+                    
+                    // Update last updated time
+                    document.getElementById('last-update').textContent = 'Last updated: ' + data.last_updated;
+                })
+                .catch(error => {
+                    console.error('Error fetching stats:', error);
+                });
+        };
+        
+        // Set initial last update time
+        const now = new Date();
+        document.getElementById('last-update').textContent = 'Last updated: ' + now.toLocaleString();
+        
+        // Refresh button click handler
+        document.getElementById('refresh-stats').addEventListener('click', refreshStats);
+        
+        // Auto refresh every 60 seconds
+        setInterval(refreshStats, 60000);
+    });
+</script>
+{% endblock %}

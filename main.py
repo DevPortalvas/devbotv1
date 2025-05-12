@@ -8,6 +8,9 @@ from utils.webhook import WebhookManager
 from keepalive import keep_alive
 from pymongo import MongoClient
 
+# Import Flask app for the dashboard
+from app import app as flask_app
+
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 MONGO_URI = os.getenv("MONGO_URI")  # Ensure you have MONGO_URI in your .env file
@@ -58,7 +61,7 @@ async def on_ready():
     print(f"Logged in as {bot.user}")
     
     # Set streaming activity
-    activity = discord.Game(name="ΚΑΝΕ ΜΕ @ ΝΕΓΡΟ")
+    activity = discord.Game(name="Discord Economy")
     await bot.change_presence(activity=activity)
     
     # Initialize webhook status manager
@@ -144,3 +147,6 @@ try:
 except socket.error:
     print("Another instance is already running - exiting")
     sys.exit(0)
+
+# For Gunicorn to import Flask app
+app = flask_app

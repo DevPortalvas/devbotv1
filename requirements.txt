@@ -32,3 +32,11 @@ flask
 flask-login
 gunicorn
 pymongo
+flask
+flask-login
+flask-sqlalchemy
+flask-wtf
+gunicorn
+pymongo
+python-dotenv
+werkzeug

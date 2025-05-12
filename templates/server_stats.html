@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block title %}Server Statistics - Discord Bot{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 page-header">Server Statistics</h1>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-secondary active">Day</button>
+            <button type="button" class="btn btn-outline-secondary">Week</button>
+            <button type="button" class="btn btn-outline-secondary">Month</button>
+        </div>
+    </div>
+    
+    <!-- Stats Overview Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">CPU Usage</h6>
+                            <h2 class="mb-0">{{ cpu_usage }}%</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(155, 89, 182, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-microchip" style="color: var(--purple-primary);"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ cpu_usage }}%" aria-valuenow="{{ cpu_usage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">Cores: {{ cpu_cores }}</small>
+                        <small class="text-success">
+                            <i class="fas fa-arrow-down me-1"></i>2.4%
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Memory Usage</h6>
+                            <h2 class="mb-0">{{ memory_usage }}%</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(155, 89, 182, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-memory" style="color: var(--purple-primary);"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ memory_usage }}%" aria-valuenow="{{ memory_usage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">{{ memory_used }} / {{ memory_total }}</small>
+                        <small class="text-danger">
+                            <i class="fas fa-arrow-up me-1"></i>5.1%
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Disk Usage</h6>
+                            <h2 class="mb-0">{{ disk_usage }}%</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(155, 89, 182, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-hdd" style="color: var(--purple-primary);"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: {{ disk_usage }}%" aria-valuenow="{{ disk_usage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">{{ disk_used }} / {{ disk_total }}</small>
+                        <small class="text-muted">
+                            <i class="fas fa-minus me-1"></i>No change
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>
+                            <h6 class="card-subtitle text-muted">Network</h6>
+                            <h2 class="mb-0">{{ network_speed }}</h2>
+                        </div>
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="background-color: rgba(155, 89, 182, 0.1); width: 48px; height: 48px;">
+                            <i class="fas fa-network-wired" style="color: var(--purple-primary);"></i>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" role="progressbar" style="width: 45%" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small class="text-muted">↑ {{ network_up }} ↓ {{ network_down }}</small>
+                        <small class="text-success">
+                            <i class="fas fa-check-circle me-1"></i>Stable
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MongoDB Stats -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">MongoDB Performance</h5>
+            <div class="badge bg-success">Connected</div>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="mongoQueryChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <h6>Key Performance Metrics</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <td>Average Query Time</td>
+                                        <td class="text-end">{{ mongo_avg_query_time }} ms</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Queries Per Second</td>
+                                        <td class="text-end">{{ mongo_queries_per_second }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Database Size</td>
+                                        <td class="text-end">{{ mongo_db_size }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Collection Count</td>
+                                        <td class="text-end">{{ mongo_collection_count }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Document Count</td>
+                                        <td class="text-end">{{ mongo_document_count }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <h6>Connection Info</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tbody>
+                                    <tr>
+                                        <td>Connection Type</td>
+                                        <td class="text-end">{{ mongo_connection_type }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Host</td>
+                                        <td class="text-end">{{ mongo_host }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Pool Size</td>
+                                        <td class="text-end">{{ mongo_pool_size }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Discord API Stats -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Discord API Stats</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="discordApiChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Endpoint</th>
+                                    <th>Calls</th>
+                                    <th>Avg. Response</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Messages</td>
+                                    <td>{{ discord_messages_calls }}</td>
+                                    <td>{{ discord_messages_response }} ms</td>
+                                    <td><span class="badge bg-success">OK</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Guilds</td>
+                                    <td>{{ discord_guilds_calls }}</td>
+                                    <td>{{ discord_guilds_response }} ms</td>
+                                    <td><span class="badge bg-success">OK</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Members</td>
+                                    <td>{{ discord_members_calls }}</td>
+                                    <td>{{ discord_members_response }} ms</td>
+                                    <td><span class="badge bg-success">OK</span></td>
+                                </tr>
+                                <tr>
+                                    <td>Channels</td>
+                                    <td>{{ discord_channels_calls }}</td>
+                                    <td>{{ discord_channels_response }} ms</td>
+                                    <td><span class="badge bg-warning">Slow</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Events Log -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">System Events</h5>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-download me-1"></i> Export
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+                {% for event in system_events %}
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ event.title }}</h6>
+                        <small class="text-muted">{{ event.time }}</small>
+                    </div>
+                    <p class="mb-1">{{ event.description }}</p>
+                    <div>
+                        <span class="badge {{ event.level_badge }}">{{ event.level }}</span>
+                        <span class="badge bg-secondary">{{ event.type }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+                {% if not system_events %}
+                <div class="list-group-item text-center py-4">
+                    <p class="mb-0">No system events recorded in the selected timeframe</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Theme-aware chart configuration
+        const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const textColor = isDarkMode ? '#f8f9fa' : '#212529';
+        const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+        
+        // Common chart config
+        const chartConfig = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: textColor
+                    }
+                },
+                tooltip: {
+                    backgroundColor: isDarkMode ? '#333' : '#fff',
+                    titleColor: isDarkMode ? '#fff' : '#333',
+                    bodyColor: isDarkMode ? '#fff' : '#333',
+                    borderColor: isDarkMode ? '#555' : '#ddd',
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: gridColor
+                    },
+                    ticks: {
+                        color: textColor
+                    }
+                },
+                y: {
+                    grid: {
+                        color: gridColor
+                    },
+                    ticks: {
+                        color: textColor
+                    }
+                }
+            }
+        };
+        
+        // MongoDB Query Performance Chart
+        const mongoQueryCtx = document.getElementById('mongoQueryChart').getContext('2d');
+        const mongoQueryChart = new Chart(mongoQueryCtx, {
+            type: 'line',
+            data: {
+                labels: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
+                datasets: [{
+                    label: 'Query Time (ms)',
+                    data: [15, 17, 14, 16, 22, 28, 24, 19, 18, 20, 17, 16],
+                    borderColor: '#9B59B6',
+                    backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Queries per Minute',
+                    data: [120, 110, 90, 80, 150, 200, 180, 160, 150, 170, 160, 140],
+                    borderColor: '#3498DB',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                ...chartConfig,
+                scales: {
+                    ...chartConfig.scales,
+                    y: {
+                        ...chartConfig.scales.y,
+                        title: {
+                            display: true,
+                            text: 'Query Time (ms)',
+                            color: textColor
+                        }
+                    },
+                    y1: {
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: textColor
+                        },
+                        title: {
+                            display: true,
+                            text: 'Queries per Minute',
+                            color: textColor
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Discord API Chart
+        const discordApiCtx = document.getElementById('discordApiChart').getContext('2d');
+        const discordApiChart = new Chart(discordApiCtx, {
+            type: 'bar',
+            data: {
+                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                datasets: [{
+                    label: 'API Calls',
+                    data: [1200, 950, 1800, 2400, 2100, 1800],
+                    backgroundColor: 'rgba(155, 89, 182, 0.7)',
+                    borderColor: '#9B59B6',
+                    borderWidth: 1
+                }, {
+                    label: 'Rate Limit %',
+                    type: 'line',
+                    data: [10, 15, 30, 50, 40, 25],
+                    borderColor: '#E74C3C',
+                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    yAxisID: 'y1'
+                }]
+            },
+            options: {
+                ...chartConfig,
+                scales: {
+                    ...chartConfig.scales,
+                    y: {
+                        ...chartConfig.scales.y,
+                        title: {
+                            display: true,
+                            text: 'API Calls',
+                            color: textColor
+                        },
+                        beginAtZero: true
+                    },
+                    y1: {
+                        position: 'right',
+                        grid: {
+                            drawOnChartArea: false,
+                            color: gridColor
+                        },
+                        ticks: {
+                            color: textColor,
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Rate Limit',
+                            color: textColor
+                        },
+                        min: 0,
+                        max: 100
+                    }
+                }
+            }
+        });
+        
+        // Store charts for theme changes
+        window.dashboardCharts = {
+            ...window.dashboardCharts, // Keep existing charts
+            mongoQuery: mongoQueryChart,
+            discordApi: discordApiChart
+        };
+    });
+</script>
+{% endblock %}
