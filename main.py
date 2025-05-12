@@ -31,7 +31,7 @@ except Exception as e:
 async def get_prefix(bot, message):
     try:
         if not message.guild:
-            return "?"
+            return "d!"  # Use default prefix in DMs too
 
         # Get prefix from MongoDB
         prefix_data = db.prefixes.find_one({"guild_id": str(message.guild.id)})
@@ -99,11 +99,27 @@ async def on_message(message):
 
 
 
-keep_alive()
+# Add instance locking to prevent multiple bots running at once
+import socket
+import sys
+
+# Create a socket to serve as a lock - only one instance can bind to this port
+lock_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
 try:
-    bot.run(TOKEN)
-finally:
-    if hasattr(bot, 'webhook_manager'):
-        bot.loop.run_until_complete(bot.webhook_manager.set_offline())
-    if hasattr(bot, 'session'):
-        bot.loop.run_until_complete(bot.session.close())
+    # Try to bind to a local port that will serve as our lock
+    lock_socket.bind(('localhost', 9876))
+    print("Bot instance lock acquired - running as primary instance")
+    
+    # Continue with normal bot startup
+    keep_alive()
+    try:
+        bot.run(TOKEN)
+    finally:
+        if hasattr(bot, 'webhook_manager'):
+            bot.loop.run_until_complete(bot.webhook_manager.set_offline())
+        if hasattr(bot, 'session'):
+            bot.loop.run_until_complete(bot.session.close())
+except socket.error:
+    print("Another instance is already running - exiting")
+    sys.exit(0)

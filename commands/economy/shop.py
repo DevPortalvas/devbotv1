@@ -1,34 +1,21 @@
 import discord
+import os
 from discord.ext import commands
 from discord import app_commands
-from utils.database import update_balance, get_balance
-
-class ShopItem:
-    def __init__(self, id, name, price, description, role_id=None):
-        self.id = id
-        self.name = name
-        self.price = price
-        self.description = description
-        self.role_id = role_id  # Optional role ID to give when purchased
+import datetime
+import time
+import random
+from utils.database import update_balance, get_balance, get_shop_items, update_item_stock, update_bank_limit, update_luck, add_to_inventory
 
 class Shop(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.items = {
-            # Default items - customize these as needed
-            "1": ShopItem("1", "🥇 VIP Role", 50000, "Get the VIP role in the server"),
-            "2": ShopItem("2", "🎮 Gamer Role", 25000, "Get the Gamer role in the server"),
-            "3": ShopItem("3", "🎯 Custom Command", 75000, "Request a custom command just for you"),
-            "4": ShopItem("4", "🎭 Custom Role", 100000, "Get a custom role with your choice of name and color"),
-            "5": ShopItem("5", "🎨 Profile Banner", 30000, "Get a custom profile banner"),
-        }
-        self.guild_items = {}  # Guild ID -> {item_id: ShopItem}
 
-    @commands.command(name="shop", help="View the server's shop")
+    @commands.command(name="shop", help="View the available items in the shop")
     async def shop(self, ctx):
         await self._show_shop(ctx)
 
-    @app_commands.command(name="shop", description="View the server's shop")
+    @app_commands.command(name="shop", description="View the available items in the shop")
     async def shop_slash(self, interaction: discord.Interaction):
         await self._show_shop(interaction)
 
@@ -42,35 +29,68 @@ class Shop(commands.Cog):
         await self._buy_item(interaction, item_id)
         
     async def _show_shop(self, ctx_or_interaction):
-        # Get user and guild info
-        guild_id = ctx_or_interaction.guild.id
+        # Get user ID
         user_id = ctx_or_interaction.author.id if hasattr(ctx_or_interaction, 'author') else ctx_or_interaction.user.id
         
-        # Get the items for this guild (or use default items)
-        items = self.guild_items.get(guild_id, self.items)
+        # Get shop items
+        items = get_shop_items()
         
-        # Create embed
+        # Determine when shop refreshes
+        from pymongo import MongoClient
+        mongo_client = MongoClient(os.environ.get("MONGO_URI"))
+        db = mongo_client['discord_economy']
+        shop_data = db.shop.find_one({"id": "current_shop"})
+        last_reset = shop_data.get("last_reset", time.time()) if shop_data else time.time()
+        next_reset = last_reset + 10800  # 3 hours in seconds
+        next_reset_timestamp = int(next_reset)
+        
+        # Create embed with fancy styling
         embed = discord.Embed(
-            title="🛒 Server Shop",
-            description="Use `!buy <item_id>` to purchase an item.",
-            color=discord.Color.blue()
+            title="💎 PREMIUM SHOP 💎",
+            description=(
+                "Limited stock, items refresh every 3 hours!\n"
+                f"Next restock <t:{next_reset_timestamp}:R>\n\n"
+                "Use `d!buy <item_id>` to purchase an item."
+            ),
+            color=0x9B59B6  # Rich purple color
         )
         
+        embed.set_thumbnail(url="https://i.imgur.com/gXrFC30.png")  # Shop icon
+        
         # Add items to the embed
-        for item_id, item in items.items():
+        if not items:
             embed.add_field(
-                name=f"[{item_id}] {item.name} - ${item.price:,}",
-                value=item.description,
+                name="😔 SOLD OUT 😔",
+                value="All items are currently sold out. Check back after the restock!",
                 inline=False
             )
+        else:
+            for item in items:
+                if item["stock"] > 0:
+                    stock_status = f"📦 Stock: {item['stock']}"
+                    embed.add_field(
+                        name=f"🏷️ {item['name']} — ${item['price']:,}",
+                        value=f"**ID**: `{item['id']}`\n{item['description']}\n{stock_status}",
+                        inline=False
+                    )
             
         # Get user balance
         try:
-            balance = get_balance(guild_id, user_id)
+            balance = get_balance(None, user_id)
             pocket_balance = balance.get('pocket', 0)
-            embed.set_footer(text=f"Your balance: ${pocket_balance:,}")
+            bank_balance = balance.get('bank', 0)
+            bank_limit = balance.get('bank_limit', 10000)
+            
+            embed.add_field(
+                name="💰 YOUR BALANCE",
+                value=f"**Pocket**: ${pocket_balance:,}\n**Bank**: ${bank_balance:,}/{bank_limit:,}",
+                inline=False
+            )
         except Exception as e:
             print(f"Error getting balance in shop: {e}")
+            
+        # Add footer
+        embed.set_footer(text="Items bought from the shop are consumed automatically • Premium economy system")
             
         # Send embed
         if isinstance(ctx_or_interaction, discord.Interaction):
@@ -79,21 +99,26 @@ class Shop(commands.Cog):
             await ctx_or_interaction.send(embed=embed)
 
     async def _buy_item(self, ctx_or_interaction, item_id):
-        # Get user and guild info
-        guild = ctx_or_interaction.guild
-        guild_id = guild.id
+        # Get user
         user = ctx_or_interaction.author if hasattr(ctx_or_interaction, 'author') else ctx_or_interaction.user
         user_id = user.id
         
-        # Get the items for this guild (or use default items)
-        items = self.guild_items.get(guild_id, self.items)
+        # Get shop items
+        items = get_shop_items()
         
+        # Find the requested item
+        target_item = None
+        for item in items:
+            if item["id"] == item_id:
+                target_item = item
+                break
+                
         # Check if the item exists
-        if item_id not in items:
+        if not target_item:
             embed = discord.Embed(
                 title="❌ Item Not Found",
-                description=f"Item with ID `{item_id}` doesn't exist. Use `!shop` to see available items.",
-                color=discord.Color.red()
+                description=f"Item with ID `{item_id}` doesn't exist or is not currently in stock. Use `d!shop` to see available items.",
+                color=0xE74C3C  # Red color
             )
             if isinstance(ctx_or_interaction, discord.Interaction):
                 await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
@@ -101,19 +126,29 @@ class Shop(commands.Cog):
                 await ctx_or_interaction.send(embed=embed)
             return
             
-        # Get the item
-        item = items[item_id]
-        
+        # Check if item is in stock
+        if target_item["stock"] <= 0:
+            embed = discord.Embed(
+                title="❌ Out of Stock",
+                description=f"Sorry, **{target_item['name']}** is currently out of stock. Check back after the next restock!",
+                color=0xE74C3C
+            )
+            if isinstance(ctx_or_interaction, discord.Interaction):
+                await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
+            else:
+                await ctx_or_interaction.send(embed=embed)
+            return
+            
         # Check if user has enough money
         try:
-            balance = get_balance(guild_id, user_id)
+            balance = get_balance(None, user_id)
             pocket_balance = balance.get('pocket', 0)
             
-            if pocket_balance < item.price:
+            if pocket_balance < target_item["price"]:
                 embed = discord.Embed(
                     title="❌ Insufficient Funds",
-                    description=f"You need ${item.price:,} to buy this item, but you only have ${pocket_balance:,}.",
-                    color=discord.Color.red()
+                    description=f"You need ${target_item['price']:,} to buy this item, but you only have ${pocket_balance:,} in your pocket.",
+                    color=0xE74C3C
                 )
                 if isinstance(ctx_or_interaction, discord.Interaction):
                     await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
@@ -122,36 +157,83 @@ class Shop(commands.Cog):
                 return
                 
             # Process purchase
-            update_balance(guild_id, user_id, -item.price)
+            success = update_balance(None, user_id, -target_item["price"])
+            if not success:
+                embed = discord.Embed(
+                    title="❌ Transaction Failed",
+                    description="There was an error processing your transaction. Please try again.",
+                    color=0xE74C3C
+                )
+                if isinstance(ctx_or_interaction, discord.Interaction):
+                    await ctx_or_interaction.response.send_message(embed=embed, ephemeral=True)
+                else:
+                    await ctx_or_interaction.send(embed=embed)
+                return
+                
+            # Update item stock
+            update_item_stock(target_item["id"], -1)
             
-            # Handle role rewards if applicable
-            role_given = False
-            if item.role_id:
-                try:
-                    role = guild.get_role(int(item.role_id))
-                    if role:
-                        await user.add_roles(role)
-                        role_given = True
-                except Exception as e:
-                    print(f"Error giving role: {e}")
-                    
-            # Send success message
+            # Handle item effects
+            effect_description = ""
+            if target_item["id"] == "banknote":
+                # Increase bank limit by 5000
+                current_limit = balance.get("bank_limit", 10000)
+                new_limit = current_limit + 5000
+                update_bank_limit(user_id, new_limit)
+                effect_description = f"Your bank limit has increased from ${current_limit:,} to ${new_limit:,}!"
+                
+            elif target_item["id"] == "luck_boost":
+                # Increase luck by 10%
+                current_luck = balance.get("luck", 1.0)
+                new_luck = current_luck + 0.1
+                update_luck(user_id, new_luck)
+                effect_description = f"Your luck has increased from {current_luck:.1f}x to {new_luck:.1f}x!"
+                
+            elif target_item["id"] == "shield":
+                # Add shield to inventory with expiry time (24 hours from now)
+                shield_data = {
+                    "type": "shield",
+                    "acquired": time.time(),
+                    "expires": time.time() + 86400  # 24 hours
+                }
+                add_to_inventory(user_id, shield_data)
+                expiry_time = int(shield_data["expires"])
+                effect_description = f"You are now protected from theft for 24 hours! Expires <t:{expiry_time}:R>."
+                
+            elif target_item["id"] == "medal" or target_item["id"] == "mystery_box":
+                # Just add to inventory
+                item_data = {
+                    "type": target_item["id"],
+                    "acquired": time.time()
+                }
+                add_to_inventory(user_id, item_data)
+                if target_item["id"] == "mystery_box":
+                    # Random reward from mystery box
+                    rewards = [
+                        {"amount": 10000, "text": "found $10,000!"},
+                        {"amount": 20000, "text": "found $20,000!"},
+                        {"amount": 5000, "text": "found $5,000 and a discount coupon for your next purchase!"},
+                        {"amount": 15000, "text": "found $15,000 and a rare collectible!"},
+                        {"amount": 30000, "text": "hit the jackpot and found $30,000!"}
+                    ]
+                    import random
+                    reward = random.choice(rewards)
+                    update_balance(None, user_id, reward["amount"])
+                    effect_description = f"You opened the mystery box and {reward['text']}"
+                else:
+                    effect_description = "The medal has been added to your collection!"
+                
+            # Create success embed
             embed = discord.Embed(
                 title="✅ Purchase Successful",
-                description=f"You bought **{item.name}** for ${item.price:,}!",
-                color=discord.Color.green()
+                description=f"You bought **{target_item['name']}** for ${target_item['price']:,}!",
+                color=0x2ECC71  # Green color
             )
             
-            if role_given:
-                embed.add_field(name="Role Added", value=f"You've been given the {role.name} role!", inline=False)
-            else:
-                embed.add_field(
-                    name="Next Steps", 
-                    value="Please contact a server administrator to claim your purchase.", 
-                    inline=False
-                )
+            if effect_description:
+                embed.add_field(name="✨ Item Effect", value=effect_description, inline=False)
                 
-            new_balance = pocket_balance - item.price
+            new_balance = pocket_balance - target_item["price"]
             embed.set_footer(text=f"Remaining balance: ${new_balance:,}")
             
             if isinstance(ctx_or_interaction, discord.Interaction):
@@ -163,8 +245,8 @@ class Shop(commands.Cog):
             print(f"Error in buy command: {e}")
             error_embed = discord.Embed(
                 title="Error",
-                description="An error occurred while processing your purchase.",
-                color=discord.Color.red()
+                description="An unexpected error occurred while processing your purchase.",
+                color=0xE74C3C
             )
             if isinstance(ctx_or_interaction, discord.Interaction):
                 if not ctx_or_interaction.response.is_done():
@@ -173,40 +255,6 @@ class Shop(commands.Cog):
                     await ctx_or_interaction.followup.send(embed=error_embed, ephemeral=True)
             else:
                 await ctx_or_interaction.send(embed=error_embed)
-
-    # Admin commands to manage the shop
-    @commands.command(name="additem", help="Add an item to the shop (Admin only)")
-    @commands.has_permissions(administrator=True)
-    async def add_item(self, ctx, item_id: str, price: int, *, name_and_description):
-        # Parse name and description
-        parts = name_and_description.split('|', 1)
-        if len(parts) != 2:
-            await ctx.send("Format: !additem <id> <price> <name>|<description>")
-            return
-            
-        name, description = parts
-        
-        # Initialize guild items if needed
-        guild_id = ctx.guild.id
-        if guild_id not in self.guild_items:
-            self.guild_items[guild_id] = {}
-            
-        # Create and add the item
-        self.guild_items[guild_id][item_id] = ShopItem(item_id, name.strip(), price, description.strip())
-        
-        await ctx.send(f"✅ Added item `{item_id}` to the shop!")
-
-    @commands.command(name="removeitem", help="Remove an item from the shop (Admin only)")
-    @commands.has_permissions(administrator=True)
-    async def remove_item(self, ctx, item_id: str):
-        guild_id = ctx.guild.id
-        
-        if guild_id not in self.guild_items or item_id not in self.guild_items[guild_id]:
-            await ctx.send("❌ Item not found in this server's shop.")
-            return
-            
-        del self.guild_items[guild_id][item_id]
-        await ctx.send(f"✅ Removed item `{item_id}` from the shop!")
 
 async def setup(bot):
     await bot.add_cog(Shop(bot))

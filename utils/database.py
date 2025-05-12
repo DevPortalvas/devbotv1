@@ -1,5 +1,6 @@
 
 import os
+import random
 from pymongo import MongoClient, errors
 from dotenv import load_dotenv
 import time
@@ -63,22 +64,28 @@ db = db_connection.db
 @with_retry
 def get_balance(guild_id, user_id):
     try:
-        query = {"guild_id": str(guild_id), "user_id": str(user_id)}
+        # Global currency - only use user_id
+        query = {"user_id": str(user_id)}
         user_data = db.economies.find_one(query)
         
         if not user_data:
             user_data = {
-                "guild_id": str(guild_id),
                 "user_id": str(user_id),
                 "pocket": 0,
-                "bank": 0
+                "bank": 0,
+                "bank_limit": 10000,  # Default bank limit
+                "luck": 1.0,          # Default luck multiplier for steal/heist
+                "inventory": []       # User's inventory of purchased items
             }
             db.economies.insert_one(user_data)
-            return {"pocket": 0, "bank": 0}
+            return {"pocket": 0, "bank": 0, "bank_limit": 10000, "luck": 1.0, "inventory": []}
         
         return {
             "pocket": user_data.get("pocket", 0),
-            "bank": user_data.get("bank", 0)
+            "bank": user_data.get("bank", 0),
+            "bank_limit": user_data.get("bank_limit", 10000),
+            "luck": user_data.get("luck", 1.0),
+            "inventory": user_data.get("inventory", [])
         }
     except Exception as e:
         print(f"Database error in get_balance: {e}")
@@ -87,18 +94,106 @@ def get_balance(guild_id, user_id):
 @with_retry
 def update_balance(guild_id, user_id, amount, location="pocket"):
     MAX_VALUE = 2**63-1
-    query = {"guild_id": str(guild_id), "user_id": str(user_id)}
+    # Global currency - only use user_id
+    query = {"user_id": str(user_id)}
     
     current = db.economies.find_one(query)
     if current is None:
-        current = {location: 0}
+        current = {
+            "pocket": 0,
+            "bank": 0,
+            "bank_limit": 10000,
+            "luck": 1.0,
+            "inventory": []
+        }
+    
+    # If depositing to bank, ensure it doesn't exceed the limit
+    if location == "bank":
+        bank_limit = current.get("bank_limit", 10000)
+        current_bank = current.get("bank", 0)
+        
+        # Limit how much can be added based on bank limit
+        if amount > 0:
+            amount = min(amount, bank_limit - current_bank)
+            if amount <= 0:  # Bank is full
+                return False
     
     new_amount = min(MAX_VALUE, max(0, current.get(location, 0) + amount))
     update = {"$set": {location: new_amount}}
     db.economies.update_one(query, update, upsert=True)
+    return True
 
 @with_retry
 def save_balance(guild_id, user_id, balance):
-    query = {"guild_id": str(guild_id), "user_id": str(user_id)}
+    # Global currency - only use user_id
+    query = {"user_id": str(user_id)}
     update = {"$set": balance}
     db.economies.update_one(query, update, upsert=True)
+    
+@with_retry
+def update_bank_limit(user_id, new_limit):
+    query = {"user_id": str(user_id)}
+    update = {"$set": {"bank_limit": new_limit}}
+    db.economies.update_one(query, update, upsert=True)
+    
+@with_retry
+def update_luck(user_id, new_luck):
+    query = {"user_id": str(user_id)}
+    update = {"$set": {"luck": new_luck}}
+    db.economies.update_one(query, update, upsert=True)
+    
+@with_retry
+def add_to_inventory(user_id, item):
+    query = {"user_id": str(user_id)}
+    update = {"$push": {"inventory": item}}
+    db.economies.update_one(query, update, upsert=True)
+    
+@with_retry
+def get_shop_items():
+    # Get the current shop items with stock
+    shop_data = db.shop.find_one({"id": "current_shop"})
+    
+    if not shop_data or time.time() - shop_data.get("last_reset", 0) > 10800:  # 3 hours in seconds
+        # Time to reset the shop
+        items = [
+            {"id": "banknote", "name": "🏦 Bank Note", "price": 5000, "description": "Increases your bank limit by $5,000", "stock": random.randint(1, 10)},
+            {"id": "luck_boost", "name": "🍀 Luck Boost", "price": 7500, "description": "Increases your luck by 10% for steal and heist commands", "stock": random.randint(1, 5)},
+            {"id": "shield", "name": "🛡️ Theft Shield", "price": 10000, "description": "Protects your money from theft for 24 hours", "stock": random.randint(0, 3)},
+            {"id": "medal", "name": "🥇 Prestige Medal", "price": 50000, "description": "A rare collectible to show your wealth", "stock": random.randint(0, 1)},
+            {"id": "mystery_box", "name": "📦 Mystery Box", "price": 15000, "description": "Contains a random reward", "stock": random.randint(3, 8)}
+        ]
+        
+        # Randomly determine which items will be in stock (at least 2)
+        available_count = random.randint(2, len(items))
+        random.shuffle(items)
+        available_items = items[:available_count]
+        
+        # Save to database
+        db.shop.update_one(
+            {"id": "current_shop"}, 
+            {"$set": {"items": available_items, "last_reset": time.time()}}, 
+            upsert=True
+        )
+        
+        return available_items
+    
+    return shop_data.get("items", [])
+    
+@with_retry
+def update_item_stock(item_id, change):
+    shop_data = db.shop.find_one({"id": "current_shop"})
+    if not shop_data:
+        return False
+        
+    items = shop_data.get("items", [])
+    for item in items:
+        if item["id"] == item_id:
+            new_stock = item["stock"] + change
+            if new_stock < 0:
+                return False
+                
+            item["stock"] = new_stock
+            db.shop.update_one({"id": "current_shop"}, {"$set": {"items": items}})
+            return True
+            
+    return False
