@@ -71,22 +71,6 @@ async def on_ready():
         bot.loop.create_task(bot.webhook_manager.update_status())
 
     # Load all extensions from /commands and subfolders
-    # First load tester modules
-    tester_modules = [
-        "commands.tester.addtester",
-        "commands.tester.testmoney",
-        "commands.tester.testitems",
-        "commands.tester.thelp"
-    ]
-    
-    for module in tester_modules:
-        try:
-            await bot.load_extension(module)
-            print(f"Loaded tester module: {module}")
-        except Exception as e:
-            print(f"Failed to load tester module {module}: {e}")
-    
-    # Now load all other modules
     for root, dirs, files in os.walk("./commands"):
         for filename in files:
             if filename.endswith(".py"):
@@ -94,8 +78,8 @@ async def on_ready():
                     path = os.path.join(root, filename)
                     module_path = path.replace("./", "").replace("/", ".")[:-3]
                     
-                    # Skip tester modules as they were already loaded
-                    if module_path in tester_modules:
+                    # Skip loading tester modules as requested
+                    if module_path.startswith("commands.tester"):
                         continue
                         
                     await bot.load_extension(module_path)

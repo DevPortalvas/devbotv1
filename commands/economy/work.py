@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import random
 from utils.database import update_balance
+from utils.feedback import add_feedback_buttons
 
 class Work(commands.Cog):
     def __init__(self, bot):
@@ -34,7 +35,11 @@ class Work(commands.Cog):
                 return
             msg = f"You worked hard and earned ${earnings}!"
             embed = discord.Embed(title="You finally did a job pig!", description=msg, color=discord.Color.orange())
-            await ctx.send(embed=embed)
+            
+            # Add feedback buttons
+            feedback_view = add_feedback_buttons("work", ctx.author.id)
+            message = await ctx.send(embed=embed, view=feedback_view)
+            feedback_view.message = message
         except Exception as e:
             print(f"Error in work: {e}")
             await ctx.send("An error occurred while processing your request.")
@@ -44,7 +49,10 @@ class Work(commands.Cog):
         update_balance(interaction.guild.id, interaction.user.id, earnings)
         msg = f"You worked hard and earned ${earnings}!"
         embed = discord.Embed(title="You finally did a job pig!", description=msg, color=discord.Color.orange())
-        await interaction.response.send_message(embed=embed)
+        
+        # Add feedback buttons
+        feedback_view = add_feedback_buttons("work", interaction.user.id)
+        await interaction.response.send_message(embed=embed, view=feedback_view)
 
     @work.error
     async def work_error(self, ctx, error):

@@ -3,7 +3,8 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import random
-from utils.database import get_balance, update_balance  
+from utils.database import get_balance, update_balance
+from utils.feedback import add_feedback_buttons
 
 class Steal(commands.Cog):  
     def __init__(self, bot):  
@@ -79,10 +80,15 @@ class Steal(commands.Cog):
             return await self._send(ctx_or_interaction, error_embed, True)
 
     async def _send(self, ctx_or_interaction, embed, ephemeral=False):  
+        # Add feedback buttons
+        user = ctx_or_interaction.user if hasattr(ctx_or_interaction, 'user') else ctx_or_interaction.author
+        feedback_view = add_feedback_buttons("steal", user.id)
+        
         if isinstance(ctx_or_interaction, discord.Interaction):  
-            await ctx_or_interaction.response.send_message(embed=embed, ephemeral=ephemeral)  
+            await ctx_or_interaction.response.send_message(embed=embed, view=feedback_view, ephemeral=ephemeral)  
         else:  
-            await ctx_or_interaction.send(embed=embed)  
+            message = await ctx_or_interaction.send(embed=embed, view=feedback_view)
+            feedback_view.message = message
 
     @steal.error  
     async def steal_error(self, ctx, error):  

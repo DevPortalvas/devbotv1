@@ -5,6 +5,7 @@ import random
 from utils.database import update_balance, get_balance
 import time
 import datetime
+from utils.feedback import add_feedback_buttons
 
 class Daily(commands.Cog):
     def __init__(self, bot):
@@ -116,11 +117,15 @@ class Daily(commands.Cog):
             # Update cooldown
             self.cooldowns[guild_id][user_id] = current_time
             
+            # Add feedback buttons
+            feedback_view = add_feedback_buttons("daily", user_id)
+            
             # Send response
             if isinstance(ctx_or_interaction, discord.Interaction):
-                await ctx_or_interaction.response.send_message(embed=embed)
+                await ctx_or_interaction.response.send_message(embed=embed, view=feedback_view)
             else:
-                await ctx_or_interaction.send(embed=embed)
+                message = await ctx_or_interaction.send(embed=embed, view=feedback_view)
+                feedback_view.message = message
                 
         except Exception as e:
             print(f"Error in daily command: {e}")

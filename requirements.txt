@@ -28,3 +28,7 @@ Flask
 pymongo
 python-dotenv
 psutil
+flask
+flask-login
+gunicorn
+pymongo

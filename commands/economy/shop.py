@@ -6,6 +6,7 @@ import datetime
 import time
 import random
 from utils.database import update_balance, get_balance, get_shop_items, update_item_stock, update_bank_limit, update_luck, add_to_inventory
+from utils.feedback import add_feedback_buttons
 
 class Shop(commands.Cog):
     def __init__(self, bot):
@@ -92,11 +93,15 @@ class Shop(commands.Cog):
         # Add footer
         embed.set_footer(text="Items bought from the shop are consumed automatically • Premium economy system")
             
+        # Add feedback buttons
+        feedback_view = add_feedback_buttons("shop", user_id)
+            
         # Send embed
         if isinstance(ctx_or_interaction, discord.Interaction):
-            await ctx_or_interaction.response.send_message(embed=embed)
+            await ctx_or_interaction.response.send_message(embed=embed, view=feedback_view)
         else:
-            await ctx_or_interaction.send(embed=embed)
+            message = await ctx_or_interaction.send(embed=embed, view=feedback_view)
+            feedback_view.message = message
 
     async def _buy_item(self, ctx_or_interaction, item_id):
         # Get user
@@ -236,10 +241,14 @@ class Shop(commands.Cog):
             new_balance = pocket_balance - target_item["price"]
             embed.set_footer(text=f"Remaining balance: ${new_balance:,}")
             
+            # Add feedback buttons for purchase
+            feedback_view = add_feedback_buttons("buy", user.id)
+            
             if isinstance(ctx_or_interaction, discord.Interaction):
-                await ctx_or_interaction.response.send_message(embed=embed)
+                await ctx_or_interaction.response.send_message(embed=embed, view=feedback_view)
             else:
-                await ctx_or_interaction.send(embed=embed)
+                message = await ctx_or_interaction.send(embed=embed, view=feedback_view)
+                feedback_view.message = message
                 
         except Exception as e:
             print(f"Error in buy command: {e}")

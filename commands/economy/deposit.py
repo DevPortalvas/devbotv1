@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from utils.database import get_balance, update_balance
+from utils.feedback import add_feedback_buttons
   
 class Deposit(commands.Cog):  
     def __init__(self, bot):  
@@ -159,10 +160,14 @@ class Deposit(commands.Cog):
             inline=False
         )
           
+        # Add feedback buttons
+        feedback_view = add_feedback_buttons("deposit", user.id)
+            
         if isinstance(ctx_or_interaction, discord.Interaction):  
-            await ctx_or_interaction.response.send_message(embed=embed)  
+            await ctx_or_interaction.response.send_message(embed=embed, view=feedback_view)  
         else:  
-            await ctx_or_interaction.send(embed=embed)  
+            message = await ctx_or_interaction.send(embed=embed, view=feedback_view)
+            feedback_view.message = message  
   
 async def setup(bot):  
     await bot.add_cog(Deposit(bot))

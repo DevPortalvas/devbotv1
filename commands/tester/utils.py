@@ -32,3 +32,7 @@ def is_tester_interaction(interaction):
     # Check if user is in the testers collection
     tester = db.testers.find_one({"user_id": str(interaction.user.id)})
     return tester is not None
+
+# Empty setup function to prevent errors when the bot tries to load this as a cog
+async def setup(bot):
+    pass  # This is not a cog, but having this prevents errors

@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import random
 from utils.database import update_balance  
+from utils.feedback import add_feedback_buttons
   
 class Slut(commands.Cog):  
     def __init__(self, bot):  
@@ -44,10 +45,15 @@ class Slut(commands.Cog):
                             color=discord.Color.orange()  
                             )  
           
+        # Add feedback buttons
+        user = ctx_or_interaction.user if hasattr(ctx_or_interaction, 'user') else ctx_or_interaction.author
+        feedback_view = add_feedback_buttons("slut", user.id)
+            
         if isinstance(ctx_or_interaction, discord.Interaction):  
-            await ctx_or_interaction.response.send_message(embed=embed)  
+            await ctx_or_interaction.response.send_message(embed=embed, view=feedback_view)  
         else:  
-            await ctx_or_interaction.send(embed=embed)  
+            message = await ctx_or_interaction.send(embed=embed, view=feedback_view)
+            feedback_view.message = message
   
     @slut.error  
     async def slut_error(self, ctx, error):  
